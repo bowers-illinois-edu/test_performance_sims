@@ -1,4 +1,7 @@
-A repo to assess the performance of the new testing procedure implemented in the <https://github.com/bowers-illinois-edu/manytestsr> R package.
+# Assess the performance of our new statistical tests
+
+A repo to assess the performance of the new testing procedure implemented in
+the <https://github.com/bowers-illinois-edu/manytestsr> R package.
 
 
 # LICENSE
