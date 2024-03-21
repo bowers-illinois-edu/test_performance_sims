@@ -1,5 +1,5 @@
-A repo to assess the performance of the new testing procedure implemented in the <bowers-illinois-edu/manytestsr> R package.
-i
+A repo to assess the performance of the new testing procedure implemented in the <https://github.com/bowers-illinois-edu/manytestsr> R package.
+
 
 # LICENSE
 
