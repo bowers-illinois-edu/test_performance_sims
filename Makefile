@@ -60,37 +60,18 @@ figures/simsres_plotting.rda: figures/results_data_for_plots.R \
 	Analysis/simsres.rda
 	R --file=figures/results_data_for_plots.R
 
-#Analysis/siusimsresults.rda: Analysis/siusims.rda Analysis/siusimsresults.R renv.lock
-#	Rscript  Analysis/siusimsresults.R
-
-#Analysis/p_fwer.rda: Analysis/fwersim.R Analysis/load_subsetdata.R \
-#	Analysis/simparms.rda Data/mtwrkdat.rda Data/blocks.rda renv.lock
-#	Rscript  Analysis/fwersim.R
-
-#Analysis/siusims-B1000.rda: Analysis/siusims-B1000.R Analysis/load_subsetdata.R \
-#	Analysis/simparms.rda Data/mtwrkdat.rda Data/blocks.rda renv.lock
-#	Rscript --verbose Analysis/siusims-B1000.R
-
 ## Data tasks
+### We are mostly just using a simulated dataset
 
-Data/smalldat.rda: Data/smalldatasetup.R renv.lock
-	cd Data && Rscript  smalldatasetup.R
+make_test_data.done: Data/make_test_data.R
+	R --file=Data/make_test_data.R
 
-Data/mtdat.rda: Data/mtdatasetup.R renv.lock Data/mtdat-orig.rda
-	Rscript  Data/mtdatasetup.R
+Data/idat_equal_nb.rda: make_test_data.done
+Data/idat_not_equal_nb.rda: make_test_data.done
+Data/bdat_equal_nb.rda: make_test_data.done
+Data/bdat_not_equal_nb.rda: make_test_data.done
 
-## This dataset: metwrkdat.rda is mostly used for the blocking and treatment structure and we use load_subsetdata.R and create_effects() to make outcomes
-Data/mtwrkdat.rda: Data/mtdat.rda Data/treatmenteffectsmtdat.R renv.lock
-	Rscript  Data/treatmenteffectsmtdat.R
-
-Data/smwrkdat.rda: Data/smalldat.rda Data/treatmenteffectsSmalldat.R renv.lock
-	cd Data && Rscript  treatmenteffectsSmalldat.R
-
-Data/wrkdat.rda: Data/mtdat.rda Data/treatmenteffects.R renv.lock
-	cd Data && Rscript  treatmenteffects.R
-
-Data/blocks.rda: Data/makeblocklists.R Data/mtwrkdat.rda renv.lock
-	Rscript  --verbose Data/makeblocklists.R
+## Visualize the Makefile
 
 makefile.plots: makefile.png makefile.pdf
 
