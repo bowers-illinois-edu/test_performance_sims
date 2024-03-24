@@ -61,15 +61,19 @@ figures/simsres_plotting.rda: figures/results_data_for_plots.R \
 	R --file=figures/results_data_for_plots.R
 
 ## Data tasks
-### We are mostly just using a simulated dataset
+### Create the simulated base data one with equal block sizes and the other not equal block sizes
 
-make_test_data.done: Data/make_test_data.R
+Data/make_test_data.done: Data/make_test_data.R
 	R --file=Data/make_test_data.R
 
-Data/idat_equal_nb.rda: make_test_data.done
-Data/idat_not_equal_nb.rda: make_test_data.done
-Data/bdat_equal_nb.rda: make_test_data.done
-Data/bdat_not_equal_nb.rda: make_test_data.done
+Data/idat_equal_nb.rda: Data/make_test_data.done
+Data/idat_not_equal_nb.rda: Data/make_test_data.done
+Data/bdat_equal_nb.rda: Data/make_test_data.done
+Data/bdat_not_equal_nb.rda: Data/make_test_data.done
+
+Data/blocks_sampled.rda: Data/make_test_data.done \
+	Data/make_block_lists.R
+	R --file=Data/make_block_lists.R
 
 ## Visualize the Makefile
 
