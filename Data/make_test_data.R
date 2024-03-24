@@ -1,11 +1,14 @@
 ## Make some testing data for use in the tests in this directory
+## These data sets are the large ones and we will subsample them to assess performance with smaller numbers of blocks
 
 library(randomizr)
 library(data.table)
+library(dplyr)
+library(dtplyr)
 setDTthreads(1)
 
-nblocks <- 50
-nunits <- 5000
+nblocks <- 1000
+nunits <- 20000
 
 set.seed(12345)
 ## For now, create a very simple canceling out arrangement and simple design setup
@@ -24,7 +27,7 @@ ftable(bdat$vb1, bdat$vb2)
 idat <- bdat[idat]
 set.seed(12345)
 idat[, vi1 := round(runif(.N, min = 0, max = 10)), by = b]
-idat[, y0 := vi1 + vb1 + rnorm(100), by = b]
+idat[, y0 := vi1 + vb1 + rnorm(.N), by = b]
 idat[, tau := ifelse(b <= nblocks/2, -5 * sd(y0), 5 * sd(y0))]
 idat[, tauhomog := sd(y0) * 5]
 idat[, taunormb := rnorm(.N, mean = (sd(y0) / b), sd = sd(y0) / 2), by = b]
@@ -51,9 +54,6 @@ idat$gF <- interaction(idat$bF, idat$ZF)
 idat[, Ymd := Y - mean(Y), by = b]
 idat[, Zmd := Z - mean(Z), by = b]
 
-## Make some blocks have nothing going on so the splitting doesn't go all the way to the end
-set.seed(12345)
-idat[bF %in% c(7, 8), Ynormb := Ynull + rnorm(.N)]
 
 ## Observed Effects by Block
 idat[, list(
@@ -63,31 +63,30 @@ idat[, list(
   normb = mean(Ynormb[Z == 1] - Ynormb[Z == 0])
 ), by = b]
 
-##  Make a smaller dataset
-b1n6 <- droplevels(idat[b %in% c(1, 6), ])
-setorder(b1n6, b)
-b1n6
-b1 <- droplevels(b1n6[b == 1, ])
-
 bdat_tmp <- idat[, .(nb = .N, nt = sum(Z), nc = sum(1 - Z), pb = mean(Z)), by = b]
 bdat_tmp[, hwt := (2 * (nc * nt) / (nc + nt))]
 setkey(bdat_tmp, b)
 bdat <- bdat_tmp[bdat]
 bdat$bF <- factor(bdat$b)
+rm(bdat_tmp)
 
 setkey(idat, bF)
 setkey(bdat, bF)
 
-#### Now make data with unequal sized blocks, unequal taus, 
-bdat2 <- data.table(nb = seq(1, nblocks, length = nblocks), bF = factor(1:nblocks))
-bdat2[,nb:=ifelse(nb<4,4,nb)]
+#### Now make data with unequal sized blocks, but no block over nb=100,
+## also unequal tau (causal effects)
+bdat2 <- data.table(nb = rep(seq(4,400,length=100),length=nblocks), bF = factor(1:nblocks))
+table(bdat2$nb)
 setkey(bdat2, "bF")
 setkey(idat, "bF")
 ## Make a dataset with unequal sized blocks
-idat2 <- bdat2[idat]
-idat2[,.(unique((.N*nb)/nblocks),nb=unique(nb),N=.N),by=bF]
+#idat2 <- bdat2[idat]
+#idat2[,.(unique((.N*nb)/nblocks),nb=unique(nb),N=.N),by=bF]
 set.seed(12345)
-idat3 <- idat2[, sample(.N, size = unique((.N * nb) / nblocks), replace = TRUE), by = bF]
+##idat3 <- idat2[, sample(.N, size = unique((.N * nb) / nblocks), replace = TRUE), by = bF])
+idat3 <- data.table(bF=rep(as.character(bdat2$bF),bdat2$nb))
+idat3[,bF:=as.factor(bF)]
+idat3[,nb:=.N,by=bF]
 ## Now giving it the same blocking names as idat for ease with testing
 setkey(idat3, bF)
 idat3 <- idat3[, b := as.numeric(as.character(bF))]
@@ -118,9 +117,10 @@ idat3[, y1norm_dec := ifelse(bF %in% nullbF, y0, y0 + taunorm_dec)]
 idat3[, y1tauv2 := y0 + tauv2]
 idat3[, nb := .N, by = bF]
 
+## Randomly assign treatment but allow probability of assignment to vary by block
 set.seed(1235)
 tmp <- idat3[, .(nb = .N), by = bF]
-mb <- round(tmp$nb * runif(nblocks, min = .2, max = .8))
+mb <- round(tmp$nb * runif(nblocks, min = .3, max = .7))
 idat3[, Z := block_ra(blocks = bF, block_m = mb)]
 idat3[, Y := Z * y1 + (1 - Z) * y0]
 idat3[, Ynull := Z * y1null + (1 - Z) * y0]
@@ -142,13 +142,13 @@ bdat3 <- idat3[, .(
 ), by = bF]
 bdat3[, hwt := (2 * (nc * nt) / (nc + nt))]
 
-## Just comparing the two datasets
+## Just comparing the two datasets: one with equal numbers of people per block and the other with heterogeneous block sizes
 table(idat$bF)
 table(idat3$bF)
 nrow(idat)
 nrow(idat3)
 
-## idat = "individual level data" 
+## idat = "individual level data"
 ## bdat = "block level data" (mostly aggregated from the idat)
 idat_equal_nb <- idat
 idat_not_equal_nb <- idat3
