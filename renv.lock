@@ -256,6 +256,17 @@
       ],
       "Hash": "79e8394e1fa06a4ae954b70ca9b16e8f"
     },
+    "Rmpi": {
+      "Package": "Rmpi",
+      "Version": "0.7-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "parallel"
+      ],
+      "Hash": "0aed5aabfdac4211e1315cb90563c4b9"
+    },
     "TH.data": {
       "Package": "TH.data",
       "Version": "1.1-2",
@@ -436,6 +447,17 @@
       ],
       "Hash": "54ed3ea01b11e81a86544faaecfef8e2"
     },
+    "fabricatr": {
+      "Package": "fabricatr",
+      "Version": "1.0.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "rlang"
+      ],
+      "Hash": "b129f5ea87fe414655101292ed77f71a"
+    },
     "fansi": {
       "Package": "fansi",
       "Version": "1.0.6",
@@ -461,6 +483,35 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "f7736a18de97dea803bde0a2daaafb27"
+    },
+    "future": {
+      "Package": "future",
+      "Version": "1.33.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "digest",
+        "globals",
+        "listenv",
+        "parallel",
+        "parallelly",
+        "utils"
+      ],
+      "Hash": "e57e292737f7a4efa9d8a91c5908222c"
+    },
+    "future.apply": {
+      "Package": "future.apply",
+      "Version": "1.11.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "future",
+        "globals",
+        "parallel",
+        "utils"
+      ],
+      "Hash": "455e00c16ec193c8edcf1b2b522b3288"
     },
     "generics": {
       "Package": "generics",
@@ -572,6 +623,17 @@
         "withr"
       ],
       "Hash": "cc3361e234c4a5050e29697d675764aa"
+    },
+    "globals": {
+      "Package": "globals",
+      "Version": "0.16.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "codetools"
+      ],
+      "Hash": "2580567908cafd4f187c1e5a91e98b7f"
     },
     "glue": {
       "Package": "glue",
@@ -746,6 +808,16 @@
       ],
       "Hash": "b8552d117e1b808b09a832f589b79035"
     },
+    "listenv": {
+      "Package": "listenv",
+      "Version": "0.9.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "e2fca3e12e4db979dccc6e519b10a7ee"
+    },
     "lubridate": {
       "Package": "lubridate",
       "Version": "1.9.3",
@@ -914,6 +986,18 @@
         "stats"
       ],
       "Hash": "0ba88f9dc1b756a813144e86ad60f50c"
+    },
+    "parallelly": {
+      "Package": "parallelly",
+      "Version": "1.37.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "parallel",
+        "tools",
+        "utils"
+      ],
+      "Hash": "5410df8d22bd36e616f2a2343dbb328c"
     },
     "pillar": {
       "Package": "pillar",
