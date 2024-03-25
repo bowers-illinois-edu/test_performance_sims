@@ -172,10 +172,16 @@ idat_not_equal_nb <- idat3
 bdat_equal_nb <- bdat
 bdat_not_equal_nb <- bdat3
 
-setkey(idat_equal_nb, bF)
-setkey(bdat_equal_nb, bF)
-setkey(idat_not_equal_nb, bF)
-setkey(bdat_not_equal_nb, bF)
+## Creating a character version of bF because I think keys in data.table are better as characters but I'm not sure.
+idat_equal_nb[,bC=as.character(bF)]
+bdat_equal_nb[,bC=as.character(bF)]
+idat_not_equal_nb[,bC=as.character(bF)]
+bdat_not_equal_nb[,bC=as.character(bF)]
+
+setkey(idat_equal_nb, bC)
+setkey(bdat_equal_nb, bC)
+setkey(idat_not_equal_nb, bC)
+setkey(bdat_not_equal_nb, bC)
 
 save(idat_equal_nb,file=here::here("Data","idat_equal_nb.rda"))
 save(idat_not_equal_nb,file=here::here("Data","idat_not_equal_nb.rda"))
