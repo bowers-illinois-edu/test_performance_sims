@@ -5,6 +5,7 @@ library(randomizr)
 library(data.table)
 library(dplyr)
 library(dtplyr)
+library(fabricatr)
 setDTthreads(1)
 
 nblocks <- 1000
@@ -29,9 +30,30 @@ ftable(bdat$vb1, bdat$vb2,bdat$vb3)
 ## Now merge the block data onto the individual level data
 ## make potential outcome to control/status quo depend on a covariate at both the individual and block levels.
 idat <- bdat[idat]
+
 set.seed(12345)
 idat[, vi1 := round(runif(.N, min = 0, max = 10)), by = b]
-idat[, y0 := vi1 + vb1 + rnorm(.N), by = b]
+idat[, ub0 := draw_normal_icc(mean = 0, N = .N, clusters = b, ICC = .1)]
+idat[, y0 := vi1 + vb1 + ub0 + rnorm(.N), by = b]
+idat[, cc := .05 * sd(y0) * y0+ ub0, by = b]
+
+## Check out the relationships between potential outcome to control and covariates
+blah <- idat[, .(
+  y0ccR2 = summary(lm(y0 ~ cc))$r.squared,
+  y0R2 = summary(lm(y0 ~ vb1 + vi1 + cc))$r.squared,
+  nb = .N,
+  bary0 = mean(y0),
+  barub0 = mean(ub0),
+  sdy0 = sd(y0),
+  sdub0 = sd(ub0),
+  sdcc = sd(cc)
+), by = b]
+summary(blah)
+stopifnot(sum(blah$y0ccR2 > .99) < 10)
+blah[y0R2 > .80, ]
+summary(blah[y0R2 > .80, ])
+rm(blah)
+
 idat[, tau := ifelse(b <= nblocks/2, -5 * sd(y0), 5 * sd(y0))]
 idat[, tauhomog := sd(y0) * 5]
 idat[, taunormb := rnorm(.N, mean = (sd(y0) / b), sd = sd(y0) / 2), by = b]
@@ -40,33 +62,38 @@ idat[, y1homog := y0 + tauhomog]
 idat[, y1normb := y0 + taunormb]
 stopifnot(all.equal(mean(idat$y1 - idat$y0), 0))
 ## Randomly assign half to treatment
-idat[, Z := complete_ra(N = nunits/nblocks), by = b]
-testra <- idat[, sum(Z), by = b]
+idat[, trt := complete_ra(N = nunits/nblocks), by = b]
+testra <- idat[, sum(trt), by = b]
 stopifnot(all(testra$V1 == (nunits/nblocks)/2))
-idat[, Y := Z * y1 + (1 - Z) * y0]
+idat[, Y := trt * y1 + (1 - trt) * y0]
 ## Now ensure that the no effects case is really no effects
-idat[, y0null := resid(lm(y0 ~ Z, data = .SD)), by = b]
+idat[, y0null := resid(lm(y0 ~ trt, data = .SD)), by = b]
 idat[, y1null := y0null]
-idat[, Ynull := Z * y1null + (1 - Z) * y0null]
+idat[, Ynull := trt * y1null + (1 - trt) * y0null]
 stopifnot(all.equal(idat$Ynull, idat$y0null))
-idat[, Yhomog := Z * y1homog + (1 - Z) * y0]
-idat[, Ynormb := Z * y1normb + (1 - Z) * y0]
-idat$ZF <- factor(idat$Z)
+idat[, Yhomog := trt * y1homog + (1 - trt) * y0]
+idat[, Ynormb := trt * y1normb + (1 - trt) * y0]
+idat$trtF <- factor(idat$trt)
 idat$bF <- factor(idat$b)
-idat$gF <- interaction(idat$bF, idat$ZF)
+idat$gF <- interaction(idat$bF, idat$trtF)
 ## Created aligned versions of the  variables
 idat[, Ymd := Y - mean(Y), by = b]
-idat[, Zmd := Z - mean(Z), by = b]
+idat[, trtmd := trt - mean(trt), by = b]
 
 ## Observed Effects by Block
 idat[, list(
-  canceling = mean(Y[Z == 1] - Y[Z == 0]),
-  null = mean(Ynull[Z == 1] - Ynull[Z == 0]),
-  homog = mean(Yhomog[Z == 1] - Yhomog[Z == 0]),
-  normb = mean(Ynormb[Z == 1] - Ynormb[Z == 0])
+  canceling = mean(Y[trt == 1] - Y[trt == 0]),
+  null = mean(Ynull[trt == 1] - Ynull[trt == 0]),
+  homog = mean(Yhomog[trt == 1] - Yhomog[trt == 0]),
+  normb = mean(Ynormb[trt == 1] - Ynormb[trt == 0])
 ), by = b]
 
-bdat_tmp <- idat[, .(nb = .N, nt = sum(Z), nc = sum(1 - Z), pb = mean(Z)), by = b]
+bdat_tmp <- idat[, .(nb = .N,
+  nt = sum(trt),
+  nc = sum(1 - trt),
+  pb = mean(trt),
+  covscluster=mean(cc)), by = b]
+
 bdat_tmp[, hwt := (2 * (nc * nt) / (nc + nt))]
 setkey(bdat_tmp, b)
 bdat <- bdat_tmp[bdat]
@@ -108,7 +135,30 @@ idat3 <- idat3[, b := as.numeric(as.character(bF))]
 idat3[, c("v1", "v2", "v3", "v4") := lapply(1:4, function(i) {
   rnorm(.N, mean = .N / i, sd = 1 / i)
 }), by = bF]
-idat3[, y0 := v1 + vb1+ rnorm(.N), by = bF]
+
+set.seed(12345)
+idat3[, ub0 := draw_normal_icc(mean = 0, N = .N, clusters = b, ICC = .1)]
+idat3[, y0 := v1 + vb1 + ub0 + rnorm(.N), by = b]
+idat3[, cc := .05 * sd(y0) * y0+ ub0, by = b]
+
+## Check out the relationships between potential outcome to control and covariates
+blah <- idat3[, .(
+  y0ccR2 = summary(lm(y0 ~ cc))$r.squared,
+  y0R2 = summary(lm(y0 ~ vb1 + v1 + cc))$r.squared,
+  nb = .N,
+  bary0 = mean(y0),
+  barub0 = mean(ub0),
+  sdy0 = sd(y0),
+  sdub0 = sd(ub0),
+  sdcc = sd(cc)
+), by = b]
+summary(blah)
+stopifnot(sum(blah$y0ccR2 > .99) < 10)
+blah[y0R2 > .90, ]
+blah[y0ccR2 > .90, ]
+summary(blah[y0R2 > .90, ])
+summary(blah[y0ccR2 > .90, ])
+
 idat3[, tau := ifelse(b <= nblocks, -5 * sd(y0), 5 * sd(y0))]
 idat3[, tauhomog := 5 * sd(y0)]
 ## Taunorm_inc increases the effect with the block number and also size of the block.
@@ -135,18 +185,19 @@ idat3[, y1tauv2 := y0 + tauv2]
 set.seed(1235)
 tmp <- idat3[, .(nb = .N), by = bF]
 mb <- round(tmp$nb * runif(nblocks, min = .3, max = .7))
-idat3[, Z := block_ra(blocks = bF, block_m = mb)]
-idat3[, Y := Z * y1 + (1 - Z) * y0]
-idat3[, Ynull := Z * y1null + (1 - Z) * y0]
-idat3[, Yhomog := Z * y1homog + (1 - Z) * y0]
-idat3[, Ynorm_inc := Z * y1norm_inc + (1 - Z) * y0]
-idat3[, Ynorm_dec := Z * y1norm_dec + (1 - Z) * y0]
-idat3[, Ytauv2 := Z * y1tauv2 + (1 - Z) * y0]
-idat3$ZF <- factor(idat3$Z)
+idat3[, trt := block_ra(blocks = bF, block_m = mb)]
+idat3[, Y := trt * y1 + (1 - trt) * y0]
+idat3[, Ynull := trt * y1null + (1 - trt) * y0]
+idat3[, Yhomog := trt * y1homog + (1 - trt) * y0]
+idat3[, Ynorm_inc := trt * y1norm_inc + (1 - trt) * y0]
+idat3[, Ynorm_dec := trt * y1norm_dec + (1 - trt) * y0]
+idat3[, Ytauv2 := trt * y1tauv2 + (1 - trt) * y0]
+idat3$trtF <- factor(idat3$trt)
 idat3[, .(.N, mean(y1tauv2 - y0)), by = bF]
 bdat3 <- idat3[, .(
-  nb = .N, nt = sum(Z), nc = sum(1 - Z), pb = mean(Z),
+  nb = .N, nt = sum(trt), nc = sum(1 - trt), pb = mean(trt),
   v1 = mean(v1), v2 = mean(v2), v3 = mean(v3), v4 = mean(v4),
+  covscluster= mean(cc), barub0=mean(ub0),
   ate_tau = mean(y1 - y0),
   ate_null = mean(y1null - y0),
   ate_homog = mean(y1homog - y0),
@@ -158,6 +209,15 @@ bdat3 <- idat3[, .(
   vb3=unique(vb3)
 ), by = bF]
 bdat3[, hwt := (2 * (nc * nt) / (nc + nt))]
+
+###  A factor or categorial covariate for pre-determined splitting functions
+bdat[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+bdat3[, covsplits:= interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+idat[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+idat3[, covsplits:= interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+## covscluster
+idat[, covscluster:=cc]
+idat3[, covscluster:=cc]
 
 ## Just comparing the two datasets: one with equal numbers of people per block and the other with heterogeneous block sizes
 table(idat$bF)
@@ -173,11 +233,10 @@ bdat_equal_nb <- bdat
 bdat_not_equal_nb <- bdat3
 
 ## Creating a character version of bF because I think keys in data.table are better as characters but I'm not sure.
-idat_equal_nb[,bC=as.character(bF)]
-bdat_equal_nb[,bC=as.character(bF)]
-idat_not_equal_nb[,bC=as.character(bF)]
-bdat_not_equal_nb[,bC=as.character(bF)]
-
+idat_equal_nb[,bC:=as.character(bF)]
+bdat_equal_nb[,bC:=as.character(bF)]
+idat_not_equal_nb[,bC:=as.character(bF)]
+bdat_not_equal_nb[,bC:=as.character(bF)]
 setkey(idat_equal_nb, bC)
 setkey(bdat_equal_nb, bC)
 setkey(idat_not_equal_nb, bC)
