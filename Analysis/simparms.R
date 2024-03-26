@@ -23,21 +23,23 @@ simparms <- expand.grid(
   p_adj_method = padjmethods,
   stopsplitting = stopsplitting,
   stringsAsFactors = FALSE,
-  block_sizes = c("equal","not_equal")
+  block_sizes = c("equal", "not_equal")
 )
 setDT(simparms)
 dim(simparms)
 
-simparms[, idatnm:=paste("idat_",block_sizes,"_B", simparms$nblocks, sep = "")]
-simparms[, bdatnm:=paste("bdat_",block_sizes,"_B", simparms$nblocks, sep = "")]
+simparms[, idatnm := paste("idat_", block_sizes, "_B", simparms$nblocks, sep = "")]
+simparms[, bdatnm := paste("bdat_", block_sizes, "_B", simparms$nblocks, sep = "")]
 
 ## The specified factor splitters use a categorial covariate with a specific structure like state.district.school
 simparms[, splitby := ifelse(splitfn %in% c("splitSpecifiedFactor", "splitSpecifiedFactorMulti"), "covsplits", "hwt")]
 ## There is no point of splitting off a single largest block (or block with largest statistical power)
-simparms[, splitby := ifelse(splitfn=="splitLOO" & block_sizes=="equal", "vary0new", "hwt")]
+simparms[, splitby := ifelse(splitfn == "splitLOO" & block_sizes == "equal", "vary0new", splitby)]
 simparms[splitfn == "splitCluster", splitby := "covscluster"]
 ## Allow treatment effects to vary by a covariate called "covscluster" if we use one of the tau_fn_covariates... functions
 simparms[, covars := "covscluster"]
+
+with(simparms, table(splitfn, splitby, exclude = c()))
 
 ## Keep only one row for each  prop_blocks_0=1 since all effects will be null
 simparms <- droplevels(simparms[(prop_blocks_0 < 1 | (prop_blocks_0 == 1 & tau_sizes == 0)), ])
@@ -56,9 +58,9 @@ table(simparms$dups)
 
 sp1 <- droplevels(simparms[!(dups), ])
 ## Test that the duplication removal actually works
-tmp1 <- simparms[p_adj_method == "fdr" & nblocks == 10 & tau_sizes == .5 & prop_blocks_0 == 0 & pfn == "pOneway" & stopsplitting == TRUE & block_sizes=="equal", ]
+tmp1 <- simparms[p_adj_method == "fdr" & nblocks == 10 & tau_sizes == .5 & prop_blocks_0 == 0 & pfn == "pOneway" & stopsplitting == TRUE & block_sizes == "equal", ]
 
-tmp2 <- sp1[p_adj_method == "fdr" & nblocks == 10 & tau_sizes == .5 & prop_blocks_0 == 0 & pfn == "pOneway" & stopsplitting == TRUE & block_sizes=="equal", ]
+tmp2 <- sp1[p_adj_method == "fdr" & nblocks == 10 & tau_sizes == .5 & prop_blocks_0 == 0 & pfn == "pOneway" & stopsplitting == TRUE & block_sizes == "equal", ]
 
 stopifnot(nrow(sp1) < nrow(simparms))
 stopifnot(nrow(tmp2) == 1)
@@ -72,7 +74,7 @@ simparms <- droplevels(sp2[(stopsplitting), ])
 
 ## Make the simulations faster --- finish a lot of small and fast stuff first
 ## so that we can prototype plots and tables and such.
-setorder(simparms,-prop_blocks_0,nblocks)
+setorder(simparms, -prop_blocks_0, nblocks)
 
 simparms[, idx := seq_len(.N)]
 setkey(simparms, idx)
@@ -83,4 +85,3 @@ tail(simparms)
 thealpha <- .05
 
 save(thealpha, simparms, file = here::here("Analysis", "simparms.rda"))
-
