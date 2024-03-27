@@ -44,7 +44,8 @@ globals <- globals[globals != "NULL"]
 
 test_and_summarize_fn <- function(i) {
     set.seed(12345)
-    x <- simparms[i, ]
+    ## simparms is keyed by idx so this is the row with idx==i
+    x <- simparms[.(i) ]
     ## nmsx0 <- names(x)
     ## nmsx <- grep('unequal',nmsx0,invert=TRUE,value=TRUE)
     ## xnm <- paste(x[,.SD,.SDcols=nmsx], collapse = "_")
@@ -81,7 +82,7 @@ test_and_summarize_fn <- function(i) {
 }
 
 # if (clusterswitch == "keeling-socket") {
-if (cl_exists & !plan_exists) {
+if (cl_exists && !plan_exists) {
     clusterEvalQ(cl, library(here))
     clusterEvalQ(cl, library(manytestsr))
     clusterEvalQ(cl, setDTthreads(1))
@@ -97,10 +98,14 @@ if (cl_exists & !plan_exists) {
 ## if there is no not_done_idx.rda file then use seq_len on simparms
 if (file.exists(here("Analysis", "not_done_idx.rda"))) {
     load(here("Analysis", "not_done_idx.rda"), verbose = TRUE)
-    theidx <- not_done_idx
+    ## since we took away some rows of simparms above, we might by accident refer
+    ## to an empty row if we were not careful here.
+    theidx <- not_done_idx[not_done_idx %in% simparms$idx]
 } else {
-    theidx <- seq_len(nrow(simparms))
+    theidx <- simparms$idx #seq_len(nrow(simparms))
 }
+
+
 
 ## In general each row of simparms will require different amounts of time to
 ## run. So below we try different approaches to load balancing. Still not sure
@@ -108,7 +113,7 @@ if (file.exists(here("Analysis", "not_done_idx.rda"))) {
 ## process waits for things to finish.
 
 # if (clusterswitch == "keeling=-socket") {
-if (cl_exists & !plan_exists) {
+if (cl_exists && !plan_exists) {
     p_sims_res <- parLapplyLB(cl, theidx,
         fun = function(i) {
             test_and_summarize_fn(i)
@@ -119,7 +124,8 @@ if (cl_exists & !plan_exists) {
 
 # if (clusterswitch == "keeling=-future") {
 if (plan_exists) {
-    ## here we are trying to load balance since each set of parameters can require a very different amount of time to run
+    ## here we are trying to load balance since each set of parameters
+    ## can require a very different amount of time to run
     options(future.globals.maxSize = +Inf)
     options(future.wait.interval = 0L) # .001)
     options(future.globals.onReference = NULL)
@@ -138,14 +144,14 @@ if (plan_exists) {
     plan(sequential)
 }
 
-test_and_summarize_fn(162)
 ##  This next for debugging
-## p_sims_res <- mclapply(theidx,
-##     FUN = function(i) {
-##         message(i)
-##         test_and_summarize_fn(i)
-##     }, mc.cores = 12, mc.preschedule = FALSE
-## )
+numcores <- length(parallelly::availableWorkers())
+p_sims_res <- mclapply(theidx,
+    FUN = function(i) {
+        message(i)
+        test_and_summarize_fn(i)
+    }, mc.cores = numcores, mc.preschedule = FALSE
+)
 
 ## p_sims_res <- lapply(theidx,
 ##     FUN = function(i) {
@@ -157,6 +163,7 @@ test_and_summarize_fn(162)
 ## Just save the expensive computation immediately using the CSVS.
 ## These next are not used since it takes days to run the simulation, at least for now.
 ## But we leave them here since maybe they will be used at some other time
+
 save(p_sims_res, file = here::here("Analysis", "p_sims_res_equal_nb_2024.rda"))
 # siusimsres_notB1000 <- rbindlist(p_sims_res, idcol = TRUE)
 # save(siusimsres_notB1000, file = here::here("Analysis", "siusimsres-notB1000_2024.rda"))
