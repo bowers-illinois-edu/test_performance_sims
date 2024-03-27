@@ -843,8 +843,15 @@
     },
     "manytestsr": {
       "Package": "manytestsr",
-      "Version": "0.0.1.0000",
-      "Source": "unknown",
+      "Version": "0.0.2.0000",
+      "Source": "GitHub",
+      "Remotes": "dsrobertson/onlineFDR",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "manytestsr",
+      "RemoteUsername": "bowers-illinois-edu",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "4df8d2155dd9319b81182c10d09c580382341e9c",
       "Requirements": [
         "Ckmeans.1d.dp",
         "ClusterR",
@@ -865,7 +872,7 @@
         "stringi",
         "tidygraph"
       ],
-      "Hash": "00fca58dea32834e986c850062a962ab"
+      "Hash": "ecfb65ff9c4b56e042aca4957ccf65b8"
     },
     "matrixStats": {
       "Package": "matrixStats",
