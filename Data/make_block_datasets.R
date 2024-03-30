@@ -13,6 +13,29 @@ load(here::here("Data", "blocks_sampled.rda"),verbose=TRUE)
 setkey(bdat_not_equal_nb, bC)
 setkey(idat_not_equal_nb, bC)
 
+## The pre-specified splitters need the lowest level to be the block in order
+## to have hopes of finding a block level effect
+bdat_equal_nb[, covsplits_orig := covsplits]
+bdat_equal_nb[, covsplits := factor(paste(covsplits_orig, bC, sep = "."))]
+bdat_equal_nb[, .(covsplits_orig, bC, covsplits)]
+
+idat_equal_nb[, covsplits_orig := covsplits]
+idat_equal_nb[, covsplits := factor(paste(covsplits_orig, bC, sep = "."))]
+idat_equal_nb[, .(covsplits_orig, bC, covsplits)]
+
+bdat_not_equal_nb[, covsplits_orig := covsplits]
+bdat_not_equal_nb[, covsplits := factor(paste(covsplits_orig, bC, sep = "."))]
+bdat_not_equal_nb[, .(covsplits_orig, bC, covsplits)]
+
+idat_not_equal_nb[, covsplits_orig := covsplits]
+idat_not_equal_nb[, covsplits := factor(paste(covsplits_orig, bC, sep = "."))]
+idat_not_equal_nb[, .(covsplits_orig, bC, covsplits)]
+
+stopifnot(all.equal(nrow(bdat_not_equal_nb),length(unique(bdat_not_equal_nb$bC))))
+stopifnot(all.equal(nrow(bdat_equal_nb),length(unique(bdat_equal_nb$bC))))
+stopifnot(all.equal(nrow(bdat_not_equal_nb),length(unique(bdat_not_equal_nb$covsplits))))
+stopifnot(all.equal(nrow(bdat_equal_nb),length(unique(bdat_equal_nb$covsplits))))
+
 icols <- c("y0","bC", "bF", "trtF", "trt", "covscluster", "covsplits", "vb1", "vb2", "vb3", "ub0")
 bcols <- c("bC", "bF", "hwt", "covscluster", "covsplits")
 
