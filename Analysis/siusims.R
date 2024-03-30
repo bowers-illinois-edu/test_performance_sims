@@ -45,7 +45,7 @@ globals <- globals[globals != "NULL"]
 test_and_summarize_fn <- function(i) {
     set.seed(12345)
     ## simparms is keyed by idx so this is the row with idx==i
-    x <- simparms[.(i) ]
+    x <- simparms[.(i)]
     ## nmsx0 <- names(x)
     ## nmsx <- grep('unequal',nmsx0,invert=TRUE,value=TRUE)
     ## xnm <- paste(x[,.SD,.SDcols=nmsx], collapse = "_")
@@ -102,7 +102,7 @@ if (file.exists(here("Analysis", "not_done_idx.rda"))) {
     ## to an empty row if we were not careful here.
     theidx <- not_done_idx[not_done_idx %in% simparms$idx]
 } else {
-    theidx <- simparms$idx #seq_len(nrow(simparms))
+    theidx <- simparms$idx # seq_len(nrow(simparms))
 }
 
 
@@ -152,6 +152,7 @@ p_sims_res <- mclapply(theidx,
         test_and_summarize_fn(i)
     }, mc.cores = numcores, mc.preschedule = FALSE
 )
+
 
 ## p_sims_res <- lapply(theidx,
 ##     FUN = function(i) {

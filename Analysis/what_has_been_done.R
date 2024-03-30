@@ -15,4 +15,7 @@ done <- stri_replace_all_fixed(list.files(path = here("Analysis/CSVS"), patt = "
 idx <- simparms$idx # seq_len(nrow(simparms))
 done_idx <- simparms$idx[simparms$nms %in% done]
 not_done_idx <- setdiff(idx, done_idx)
+
+stopifnot(all(not_done_idx %in% simparms$idx))
+
 save(not_done_idx, file = here("Analysis", "not_done_idx.rda"))
