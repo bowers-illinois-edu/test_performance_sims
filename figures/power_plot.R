@@ -44,7 +44,6 @@ simsres %>%
 plotdat_alpha_fixed <- simsres %>%
   filter(prop_blocks_0 < 1 &
     nblocks < 1000 &
-    !(splitfn %in% c("splitSpecifiedFactor", "splitSpecifiedFactorMulti")) &
     pfn == "pIndepDist" &
     afn == "fixed (a=.05)" &
     tau_sizes > 0 &
@@ -169,8 +168,7 @@ plotdat_alpha_varying <- simsres %>%
     nblocks < 1000 &
     pfn == "pIndepDist" &
     tau_sizes == .5 &
-    prop_blocks_0 == .5 &
-    splitfn != "splitSpecifiedFactorMulti" & split_vs_not == "Top-Down") %>%
+    prop_blocks_0 == .5 & split_vs_not == "Top-Down") %>%
   droplevels() %>%
   group_by(nblocks, splitfnF, afn) %>%
   mutate(

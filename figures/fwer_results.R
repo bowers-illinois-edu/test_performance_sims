@@ -16,13 +16,14 @@ load(here::here("figures", "simsres_plotting.rda"))
 
 names(simsres)
 head(simsres)
+nrow(simsres)
 
 ## Standard error of the simulations
 nsims <- 1000
 std_err_of_sim <- 2 * sqrt(.05 * (1 - .05) / nsims)
 
-### First establish weak control of the FWER:
 table(simsres$prop_blocks_0, exclude = c())
+table(simsres$nblocks, exclude = c())
 
 ## Look at the simulation results in two types Weak and Strong:
 ## FDR control is also shown
@@ -34,8 +35,6 @@ simsres_alltrue <- droplevels(simsres[prop_blocks_0 == 1 & nblocks < 1000, ])
 ## True nulls will be mixed with false nulls (i.e. in these sims, effects=0 versus effects not 0)
 ### At least one block as a true effect and at least has no effect (i.e. a "true" null)
 simsres_sometrue <- droplevels(simsres[(prop_blocks_0 < 1 & prop_blocks_0 > 0) & nblocks < 1000, ])
-
-
 
 
 ## See: https://copyprogramming.com/howto/why-is-controlling-fdr-less-stringent-than-controlling-fwer
@@ -100,12 +99,19 @@ weak_control_tab_dt <- simsres_alltrue %>%
 
 weak_control_tab_dt$afn <- gsub("_", " ", weak_control_tab_dt$afn)
 
+print(weak_control_tab_dt, n = 100)
+
+load(here("Data", "equal_blocksize_data.rda"), verbose = TRUE)
+load(here("Analysis", "simparms.rda"), verbose = TRUE)
+table(table(idat_equal_B100$bF))
+table(table(idat_equal_B10$bF))
+
 weak_control_tab <- xtable(weak_control_tab_dt,
   caption = "All approaches control FWER and FDR when the sharp null of no
   effects is true. Entries are the maximum FWER or FDR over simulations
-  involving between 10 (N=568) and 100 (N=13065) blocks with block sizes that
-  vary from 5 to 3147 units and between .4 and .6 of the units within the
-  blocks assigned to treatment at random. In this simulation the null
+  involving between 10 (N=200) and 100 (N=2000) blocks with all blocks
+having 20 units and half of the units assigned
+to treatment at random. In this simulation the null
   hypothesis of no effects is true for all units and all blocks ($\\tau_{i,b} =
   0$ for all $i$ and $b$). Twice the simulation error for 1000 simulations is
   roughly .02.",
@@ -169,35 +175,6 @@ with(not_strong_ctrl, table(tau_sizes))
 ## Interpreting the results:
 not_strong_ctrl
 
-## In truth 90 out of 100 blocks had the strong null of no effects. But the tau
-## was strong on average in the remaining 10 blocks (3 sds). In this case we
-## reject, on average, about 35 (34.9) blocks when we should be rejecting in
-## about 10. Also, when we did reject, we often rejected a block with no
-## effects (false discovery proportion 78%) rather than rejecting the null in a
-## block with  non-zero effects.
-
-t(not_strong_ctrl[185, ])
-##                         [,1]
-## splitfn                 "splitLOO"
-## nblocks                 "100"
-## afn                     "alpha_investing"
-## false_pos_prop          "0.34941"
-## false_disc_prop         "0.7755444"
-## true_disc_prop          "0.2244556"
-## tau_sizes               "3"
-## prop_blocks_0           "0.9"
-## nreject                 "44.422"
-## naccept                 "55.578"
-## prop_reject             "0.44422"
-## prop_accept             "0.55578"
-## tot_true0               "90"
-## tot_truenot0            "10"
-## tot_reject_true0        "34.941"
-## tot_not_reject_true0    "55.059"
-## tot_reject_truenot0     "9.481"
-## correct_pos_effect_prop "0.9481"
-## correct_pos_nulls_prop  "0.3882333"
-## prop_not_reject_true0   "0.55059"
 
 ## This from calc_errs()
 ##  deterrs <- detobj[, .(
