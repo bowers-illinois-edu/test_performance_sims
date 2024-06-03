@@ -49,7 +49,7 @@ sims_time_summary %>% arrange(mediantime)
 
 time_plot <- ggplot(sims_time_summary,aes(x=nblocks,y=maxtime,color=prop_blocks_0))+
   geom_point() +
-  geom_point(aes(y=mintime))
+  facet_wrap(~splitfn+afn,scales="free")
 time_plot
 
 
