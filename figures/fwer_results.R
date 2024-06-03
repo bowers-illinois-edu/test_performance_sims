@@ -25,6 +25,35 @@ std_err_of_sim <- 2 * sqrt(.05 * (1 - .05) / nsims)
 table(simsres$prop_blocks_0, exclude = c())
 table(simsres$nblocks, exclude = c())
 
+## Look at amount of time spent per sim on average
+
+sims_time_summary <- simsres %>% group_by(nblocks,prop_blocks_0,splitfn,afn) %>%
+  reframe(mintime=min(elapsed),
+          pct25time=quantile(elapsed,.25),
+          meantime=mean(elapsed),
+          mediantime=median(elapsed),
+          pct75time=quantile(elapsed,.75),
+          maxtime=max(elapsed)) %>% 
+as.data.table()
+
+sims_time_summary0 <- simsres %>% group_by(nblocks) %>%
+  reframe(mintime=min(elapsed),
+          pct25time=quantile(elapsed,.25),
+          meantime=mean(elapsed),
+          mediantime=median(elapsed),
+          pct75time=quantile(elapsed,.75),
+          maxtime=max(elapsed)) %>% 
+as.data.table()
+
+sims_time_summary %>% arrange(mediantime)
+
+time_plot <- ggplot(sims_time_summary,aes(x=nblocks,y=maxtime,color=prop_blocks_0))+
+  geom_point() +
+  geom_point(aes(y=mintime))
+time_plot
+
+
+
 ## Look at the simulation results in two types Weak and Strong:
 ## FDR control is also shown
 
