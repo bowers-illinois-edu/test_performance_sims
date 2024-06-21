@@ -60,7 +60,7 @@ test_and_summarize_fn <- function(i) {
         fmla = Y ~ trtF | bF,
         ybase = "y0new",
         prop_blocks_0 = x[["prop_blocks_0"]],
-        tau_fn = tau_norm_covariate_outliers,
+        tau_fn = tau_norm,
         tau_size = x[["tau_sizes"]],
         covariate = x[["covars"]],
         pfn = getFromNamespace(x[["pfn"]], ns = "manytestsr"),
