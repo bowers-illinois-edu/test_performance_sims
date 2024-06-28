@@ -4,7 +4,7 @@
 #SBATCH --partition=IllinoisComputes
 #SBATCH --nodes=1
 #SBATCH --ntasks=128
-#SBATCH --time=06:00:00
+#SBATCH --time=05:00:00
 #SBATCH --mail-user=mvanmoer@illinois.edu
 #SBATCH --mail-type="BEGIN,END,FAIL"
 
@@ -13,15 +13,16 @@ hostname
 
 module load singularity/3.8.5
 
+# edit for where the repos are
+PROJ=/projects/illinois/las/pol/jwbowers
+MANYTESTSRDIR="$PROJ/manytestsr"
+TEST_PERF_SIMS_DIR="$PROJ/test_performance_sims"
+
 # edit for wherever the sif is.
-SIF=/projects/illinois/las/pol/jwbowers/minimal.sif
+SIF="$PROJ/minimal.sif"
 
 # edit for wherever mclapply-test.sh is
-SCRIPT=/projects/illinois/las/pol/jwbowers/mclapply-test.sh
-
-# edit for where the repos are
-MANYTESTSRDIR=/projects/illinois/las/pol/jwbowers/manytestsr
-TEST_PERF_SIMS_DIR=/projects/illinois/las/pol/jwbowers/test_performance_sims
+SCRIPT="$TEST_PERF_SIMS_DIR/jobfiles/mclapply-test.sh"
 
 # exec to execute the script instead of launching a shell
 singularity exec \
