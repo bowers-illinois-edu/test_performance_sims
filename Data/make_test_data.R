@@ -9,7 +9,7 @@ library(fabricatr)
 setDTthreads(1)
 
 nblocks <- 1000
-nunits <- 20000
+nunits <- 30000
 
 set.seed(12345)
 ## For now, create a very simple canceling out arrangement and simple design setup
@@ -23,9 +23,9 @@ setkey(idat, b)
 bdat[, vb1 := rep(1:2, length.out = .N)]
 ## 2 levels within each state
 bdat[, vb2 := rep(1:2, length.out = .N), by = vb1]
-bdat[, vb3 := rep(1:2, length.out =.N), by=interaction(vb1, vb2, lex.order = TRUE, drop = TRUE)]
+bdat[, vb3 := rep(1:2, length.out = .N), by = interaction(vb1, vb2, lex.order = TRUE, drop = TRUE)]
 ftable(bdat$vb1, bdat$vb2)
-ftable(bdat$vb1, bdat$vb2,bdat$vb3)
+ftable(bdat$vb1, bdat$vb2, bdat$vb3)
 
 ## Now merge the block data onto the individual level data
 ## make potential outcome to control/status quo depend on a covariate at both the individual and block levels.
@@ -35,7 +35,7 @@ set.seed(12345)
 idat[, vi1 := round(runif(.N, min = 0, max = 10)), by = b]
 idat[, ub0 := draw_normal_icc(mean = 0, N = .N, clusters = b, ICC = .1)]
 idat[, y0 := vi1 + vb1 + ub0 + rnorm(.N), by = b]
-idat[, cc := .05 * sd(y0) * y0+ ub0, by = b]
+idat[, cc := .05 * sd(y0) * y0 + ub0, by = b]
 
 ## Check out the relationships between potential outcome to control and covariates
 blah <- idat[, .(
@@ -54,7 +54,7 @@ blah[y0R2 > .80, ]
 summary(blah[y0R2 > .80, ])
 rm(blah)
 
-idat[, tau := ifelse(b <= nblocks/2, -5 * sd(y0), 5 * sd(y0))]
+idat[, tau := ifelse(b <= nblocks / 2, -5 * sd(y0), 5 * sd(y0))]
 idat[, tauhomog := sd(y0) * 5]
 idat[, taunormb := rnorm(.N, mean = (sd(y0) / b), sd = sd(y0) / 2), by = b]
 idat[, y1 := y0 + tau]
@@ -62,9 +62,9 @@ idat[, y1homog := y0 + tauhomog]
 idat[, y1normb := y0 + taunormb]
 stopifnot(all.equal(mean(idat$y1 - idat$y0), 0))
 ## Randomly assign half to treatment
-idat[, trt := complete_ra(N = nunits/nblocks), by = b]
+idat[, trt := complete_ra(N = nunits / nblocks), by = b]
 testra <- idat[, sum(trt), by = b]
-stopifnot(all(testra$V1 == (nunits/nblocks)/2))
+stopifnot(all(testra$V1 == (nunits / nblocks) / 2))
 idat[, Y := trt * y1 + (1 - trt) * y0]
 ## Now ensure that the no effects case is really no effects
 idat[, y0null := resid(lm(y0 ~ trt, data = .SD)), by = b]
@@ -88,11 +88,13 @@ idat[, list(
   normb = mean(Ynormb[trt == 1] - Ynormb[trt == 0])
 ), by = b]
 
-bdat_tmp <- idat[, .(nb = .N,
+bdat_tmp <- idat[, .(
+  nb = .N,
   nt = sum(trt),
   nc = sum(1 - trt),
   pb = mean(trt),
-  covscluster=mean(cc)), by = b]
+  covscluster = mean(cc)
+), by = b]
 
 bdat_tmp[, hwt := (2 * (nc * nt) / (nc + nt))]
 setkey(bdat_tmp, b)
@@ -105,7 +107,7 @@ setkey(bdat, bF)
 
 #### Now make data with unequal sized blocks, but no block over nb=100,
 ## also unequal tau (causal effects)
-bdat2 <- data.table(nb = rep(seq(4,400,length=100),length=nblocks), bF = factor(1:nblocks))
+bdat2 <- data.table(nb = rep(seq(4, 400, length = 100), length = nblocks), bF = factor(1:nblocks))
 table(bdat2$nb)
 
 ## Make vb1, vb2, vb3 all nest within each other like states, counties, districts (with the individual blocks nested within all three)
@@ -113,21 +115,21 @@ table(bdat2$nb)
 bdat2[, vb1 := rep(1:2, length.out = .N)]
 ## 2 levels within each state
 bdat2[, vb2 := rep(1:2, length.out = .N), by = vb1]
-bdat2[, vb3 := rep(1:2, length.out =.N), by=interaction(vb1, vb2, lex.order = TRUE, drop = TRUE)]
+bdat2[, vb3 := rep(1:2, length.out = .N), by = interaction(vb1, vb2, lex.order = TRUE, drop = TRUE)]
 ftable(bdat2$vb1, bdat2$vb2)
-ftable(bdat2$vb1, bdat2$vb2,bdat2$vb3)
+ftable(bdat2$vb1, bdat2$vb2, bdat2$vb3)
 
 setkey(bdat2, "bF")
 setkey(idat, "bF")
 
 ## Make a dataset with unequal sized blocks
 set.seed(12345)
-idat2 <- data.table(bF=rep(as.character(bdat2$bF),bdat2$nb))
+idat2 <- data.table(bF = rep(as.character(bdat2$bF), bdat2$nb))
 ## Add the vb variables to the indiv level data
 idat3 <- bdat2[idat2]
-ftable(idat3$vb1, idat3$vb2,idat3$vb3)
-idat3[,bF:=as.factor(bF)]
-idat3[,nb:=.N,by=bF]
+ftable(idat3$vb1, idat3$vb2, idat3$vb3)
+idat3[, bF := as.factor(bF)]
+idat3[, nb := .N, by = bF]
 ## Now giving it the same blocking names as idat for ease with testing
 setkey(idat3, bF)
 idat3 <- idat3[, b := as.numeric(as.character(bF))]
@@ -139,7 +141,7 @@ idat3[, c("v1", "v2", "v3", "v4") := lapply(1:4, function(i) {
 set.seed(12345)
 idat3[, ub0 := draw_normal_icc(mean = 0, N = .N, clusters = b, ICC = .1)]
 idat3[, y0 := v1 + vb1 + ub0 + rnorm(.N), by = b]
-idat3[, cc := .05 * sd(y0) * y0+ ub0, by = b]
+idat3[, cc := .05 * sd(y0) * y0 + ub0, by = b]
 
 ## Check out the relationships between potential outcome to control and covariates
 blah <- idat3[, .(
@@ -197,31 +199,32 @@ idat3[, .(.N, mean(y1tauv2 - y0)), by = bF]
 bdat3 <- idat3[, .(
   nb = .N, nt = sum(trt), nc = sum(1 - trt), pb = mean(trt),
   v1 = mean(v1), v2 = mean(v2), v3 = mean(v3), v4 = mean(v4),
-  covscluster= mean(cc), barub0=mean(ub0),
+  covscluster = mean(cc), barub0 = mean(ub0),
   ate_tau = mean(y1 - y0),
   ate_null = mean(y1null - y0),
   ate_homog = mean(y1homog - y0),
   ate_norm_inc = mean(y1norm_inc - y0),
   ate_norm_dec = mean(y1norm_dec - y0),
   ate_tauv2 = mean(y1tauv2 - y0),
-  vb1=unique(vb1),
-  vb2=unique(vb2),
-  vb3=unique(vb3)
+  vb1 = unique(vb1),
+  vb2 = unique(vb2),
+  vb3 = unique(vb3)
 ), by = bF]
 bdat3[, hwt := (2 * (nc * nt) / (nc + nt))]
 
 ###  A factor or categorial covariate for pre-determined splitting functions
 bdat[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
-bdat3[, covsplits:= interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+bdat3[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
 idat[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
-idat3[, covsplits:= interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
+idat3[, covsplits := interaction(vb1, vb2, vb3, lex.order = TRUE, drop = TRUE)]
 ## covscluster
-idat[, covscluster:=cc]
-idat3[, covscluster:=cc]
+idat[, covscluster := cc]
+idat3[, covscluster := cc]
 
 ## Just comparing the two datasets: one with equal numbers of people per block and the other with heterogeneous block sizes
 table(idat$bF)
 table(idat3$bF)
+sort(table(idat3$bF))
 nrow(idat)
 nrow(idat3)
 
@@ -233,19 +236,18 @@ bdat_equal_nb <- bdat
 bdat_not_equal_nb <- bdat3
 
 ## Creating a character version of bF because I think keys in data.table are better as characters but I'm not sure.
-idat_equal_nb[,bC:=as.character(bF)]
-bdat_equal_nb[,bC:=as.character(bF)]
-idat_not_equal_nb[,bC:=as.character(bF)]
-bdat_not_equal_nb[,bC:=as.character(bF)]
+idat_equal_nb[, bC := as.character(bF)]
+bdat_equal_nb[, bC := as.character(bF)]
+idat_not_equal_nb[, bC := as.character(bF)]
+bdat_not_equal_nb[, bC := as.character(bF)]
 setkey(idat_equal_nb, bC)
 setkey(bdat_equal_nb, bC)
 setkey(idat_not_equal_nb, bC)
 setkey(bdat_not_equal_nb, bC)
 
-save(idat_equal_nb,file=here::here("Data","idat_equal_nb.rda"))
-save(idat_not_equal_nb,file=here::here("Data","idat_not_equal_nb.rda"))
-save(bdat_equal_nb,file=here::here("Data","bdat_equal_nb.rda"))
-save(bdat_not_equal_nb,file=here::here("Data","bdat_not_equal_nb.rda"))
+save(idat_equal_nb, file = here::here("Data", "idat_equal_nb.rda"))
+save(idat_not_equal_nb, file = here::here("Data", "idat_not_equal_nb.rda"))
+save(bdat_equal_nb, file = here::here("Data", "bdat_equal_nb.rda"))
+save(bdat_not_equal_nb, file = here::here("Data", "bdat_not_equal_nb.rda"))
 
 system("touch Data/make_test_data.done")
-
