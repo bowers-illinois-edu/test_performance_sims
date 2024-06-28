@@ -97,7 +97,7 @@ setkey(idat_equal_B1000, bC)
 ## It turns out that we lose control over y0 if we do not do it separately for each dataset:
 ## So this is redoing a lot of the work from make_test_data. Sigh.
 set.seed(12345)
-idat_equal_B10[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B10[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B10[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -108,7 +108,7 @@ checkB10 <- idat_equal_B10[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.squar
 stopifnot(sum(checkB10$y0ccR2 > .99) < 1)
 
 set.seed(12345)
-idat_equal_B25[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B25[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B25[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -117,7 +117,7 @@ checkB25 <- idat_equal_B25[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.squar
 stopifnot(sum(checkB25$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_equal_B50[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B50[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B50[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -126,7 +126,7 @@ checkB50 <- idat_equal_B50[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.squar
 stopifnot(sum(checkB50$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_equal_B75[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B75[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B75[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -135,7 +135,7 @@ checkB75 <- idat_equal_B75[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.squar
 stopifnot(sum(checkB75$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_equal_B100[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B100[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B100[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -144,7 +144,7 @@ checkB100 <- idat_equal_B100[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.squ
 stopifnot(sum(checkB100$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_equal_B1000[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_equal_B1000[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_equal_B1000[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -154,7 +154,7 @@ stopifnot(sum(checkB1000$y0ccR2 > .99) < 10)
 
 ## Now for the unnot_equal sized blocks
 set.seed(12345)
-idat_not_equal_B10[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B10[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B10[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -165,7 +165,7 @@ checkB10 <- idat_not_equal_B10[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.s
 stopifnot(sum(checkB10$y0ccR2 > .99) < 1)
 
 set.seed(12345)
-idat_not_equal_B25[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B25[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B25[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -174,7 +174,7 @@ checkB25 <- idat_not_equal_B25[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.s
 stopifnot(sum(checkB25$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_not_equal_B50[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B50[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B50[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -183,7 +183,7 @@ checkB50 <- idat_not_equal_B50[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.s
 stopifnot(sum(checkB50$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_not_equal_B75[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B75[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B75[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -192,7 +192,7 @@ checkB75 <- idat_not_equal_B75[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r.s
 stopifnot(sum(checkB75$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_not_equal_B100[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B100[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B100[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -201,7 +201,7 @@ checkB100 <- idat_not_equal_B100[, .(y0ccR2 = summary(lm(y0new ~ covscluster))$r
 stopifnot(sum(checkB100$y0ccR2 > .99) < 10)
 
 set.seed(12345)
-idat_not_equal_B1000[, ub0new := rnorm(.N, mean = 0, sd = 1), by = bC]
+idat_not_equal_B1000[, ub0new := rnorm(.N, mean = 10, sd = 1), by = bC]
 idat_not_equal_B1000[, y0new := {
   tmp <- .1 * sd(ub0new) * (vb1 == 1 & vb2 == 1) + .1 * sd(ub0new) * covscluster + ub0new
   ifelse(tmp < 0, abs(tmp), tmp)
@@ -245,6 +245,14 @@ rm(list = ls(patt = "objs"))
 not_equal_objs_names <- ls(patt = "not_equal")
 equal_objs_names <- grep("not", ls(patt = "_equal"), invert = TRUE, value = TRUE)
 stopifnot(all.equal(length(not_equal_objs_names), length(equal_objs_names)))
+
+## If we add 10 to each one we will not have to truncate
+summary(idat_equal_B10$y0new)
+summary(idat_equal_B25$y0new)
+summary(idat_equal_B50$y0new)
+summary(idat_equal_B75$y0new)
+summary(idat_equal_B100$y0new)
+
 
 save(list = not_equal_objs_names, file = here("Data", "unequal_blocksize_data.rda"))
 save(list = equal_objs_names, file = here("Data", "equal_blocksize_data.rda"))
