@@ -1,0 +1,32 @@
+#!/bin/bash
+#SBATCH --job-name=mclapply-no-presched
+#SBATCH --account=jwbowers-ic
+#SBATCH --partition=IllinoisComputes
+#SBATCH --nodes=1
+#SBATCH --ntasks=128
+#SBATCH --time=06:00:00
+#SBATCH --mail-user=mvanmoer@illinois.edu
+#SBATCH --mail-type="BEGIN,END,FAIL"
+
+# print out actual node assigned
+hostname
+
+module load singularity/3.8.5
+
+# edit for wherever the sif is.
+SIF=/projects/illinois/las/pol/jwbowers/minimal.sif
+
+# edit for wherever mclapply-test.sh is
+SCRIPT=/projects/illinois/las/pol/jwbowers/mclapply-test.sh
+
+# edit for where the repos are
+MANYTESTSRDIR=/projects/illinois/las/pol/jwbowers/manytestsr
+TEST_PERF_SIMS_DIR=/projects/illinois/las/pol/jwbowers/test_performance_sims
+
+# exec to execute the script instead of launching a shell
+singularity exec \
+    --bind /projects \
+    --bind $MANYTESTSRDIR:/mnt/manytestsr \
+    --bind $TEST_PERF_SIMS_DIR:/mnt/test_performance_sims \
+    "$SIF" \
+    "$SCRIPT"
