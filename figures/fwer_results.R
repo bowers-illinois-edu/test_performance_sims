@@ -13,6 +13,26 @@ library(manytestsr)
 library(xtable)
 
 load(here::here("figures", "simsres_plotting.rda"))
+load(here::here("Analysis", "simparms.rda"))
+simparms <- droplevels(simparms[nblocks < 1000 & block_sizes == "equal", ])
+parm_25 <- simparms %>%
+  filter(nblocks == 25 & prop_blocks_0 %in% c(0, 1) & tau_sizes %in% c(0, 1) & afn == "NULL") %>%
+  droplevels() %>%
+  as.data.table()
+
+dim(parm_25)
+
+load(file = here("p_sims_res_25.rda"), verbose = TRUE)
+
+names(p_sims_res_25) <- parm_25$idx
+
+parm_25 %>% filter(p_adj_method == "fdr")
+## look at idx 133
+
+str(p_sims_res_25[["133"]])
+
+tmp <- p_sims_res_25[["133"]][[1]]
+
 
 names(simsres)
 head(simsres)
@@ -27,29 +47,35 @@ table(simsres$nblocks, exclude = c())
 
 ## Look at amount of time spent per sim on average
 
-sims_time_summary <- simsres %>% group_by(nblocks,prop_blocks_0,splitfn,afn) %>%
-  reframe(mintime=min(elapsed),
-          pct25time=quantile(elapsed,.25),
-          meantime=mean(elapsed),
-          mediantime=median(elapsed),
-          pct75time=quantile(elapsed,.75),
-          maxtime=max(elapsed)) %>% 
-as.data.table()
+sims_time_summary <- simsres %>%
+  group_by(nblocks, prop_blocks_0, splitfn, afn) %>%
+  reframe(
+    mintime = min(elapsed),
+    pct25time = quantile(elapsed, .25),
+    meantime = mean(elapsed),
+    mediantime = median(elapsed),
+    pct75time = quantile(elapsed, .75),
+    maxtime = max(elapsed)
+  ) %>%
+  as.data.table()
 
-sims_time_summary0 <- simsres %>% group_by(nblocks) %>%
-  reframe(mintime=min(elapsed),
-          pct25time=quantile(elapsed,.25),
-          meantime=mean(elapsed),
-          mediantime=median(elapsed),
-          pct75time=quantile(elapsed,.75),
-          maxtime=max(elapsed)) %>% 
-as.data.table()
+sims_time_summary0 <- simsres %>%
+  group_by(nblocks) %>%
+  reframe(
+    mintime = min(elapsed),
+    pct25time = quantile(elapsed, .25),
+    meantime = mean(elapsed),
+    mediantime = median(elapsed),
+    pct75time = quantile(elapsed, .75),
+    maxtime = max(elapsed)
+  ) %>%
+  as.data.table()
 
 sims_time_summary %>% arrange(mediantime)
 
-time_plot <- ggplot(sims_time_summary,aes(x=nblocks,y=maxtime,color=prop_blocks_0))+
+time_plot <- ggplot(sims_time_summary, aes(x = nblocks, y = maxtime, color = prop_blocks_0)) +
   geom_point() +
-  facet_wrap(~splitfn+afn,scales="free")
+  facet_wrap(~ splitfn + afn, scales = "free")
 time_plot
 
 
@@ -110,6 +136,7 @@ summary(simsres_alltrue$false_pos_prop)
 
 ## make a table for the appendix (maybe. This is a lot actually.)
 simsres_alltrue %>%
+  filter(nblocks == 100 & afn == "fixed (a=.05)") %>%
   arrange(splitfnF) %>%
   select(splitfnF, nblocks, pfn, afn, false_pos_prop, false_disc_prop)
 

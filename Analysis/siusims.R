@@ -42,7 +42,7 @@ globals <- globals[globals != "NULL"]
 ## Define the function that will do the nsims simulations for each set of
 ## parameters defined in a row of simparms where i is the row of simparms
 
-test_and_summarize_fn <- function(i) {
+test_and_summarize_fn <- function(i, all_sims = FALSE) {
     set.seed(12345)
     ## simparms is keyed by idx so this is the row with idx==i
     x <- simparms[.(i)]
@@ -76,9 +76,14 @@ test_and_summarize_fn <- function(i) {
     ## Since these simulations take a long time. Save them to disc as we go.
     res_rates <- p_sims_tab[, lapply(.SD, mean, na.rm = TRUE)]
     res <- cbind(x, res_rates, elapsed = etm["elapsed"])
-    # fwrite(res, file = here::here("Analysis/CSVS", paste(xnm, ".csv", sep = "")))
-    fwrite(res, file = paste0(data_path, "/", xnm, ".csv", collapse = "", sep = ""))
-    return(res)
+    if (all_sims) {
+        res_big <- list(sims = p_sims_tab, res = res)
+        return(res_big)
+    } else {
+        # fwrite(res, file = here::here("Analysis/CSVS", paste(xnm, ".csv", sep = "")))
+        fwrite(res, file = paste0(data_path, "/", xnm, ".csv", collapse = "", sep = ""))
+        return(res)
+    }
 }
 
 # if (clusterswitch == "keeling-socket") {
@@ -152,6 +157,97 @@ p_sims_res <- mclapply(theidx,
         test_and_summarize_fn(i)
     }, mc.cores = numcores, mc.preschedule = FALSE
 )
+
+library(dtplyr)
+library(dplyr)
+
+parm_100 <- simparms %>%
+    filter(nblocks == 100 & prop_blocks_0 %in% c(1, .5) & tau_sizes %in% c(0, 2) & afn == "NULL" & p_adj_method == "fdr") %>%
+    droplevels() %>%
+    as.data.table()
+
+
+p_sims_res_100 <- future_lapply(parm_100$idx,
+    FUN = function(i) {
+        setDTthreads(1)
+        test_and_summarize_fn(i, all_sims = TRUE)
+    }, future.seed = 0xBEEF,
+    future.packages = c("here", "manytestsr"),
+    future.globals = c("test_and_summarize_fn", globals),
+    future.scheduling = Inf,
+    future.chunk.size = NULL
+)
+
+names(p_sims_res_100) <- parm_100$idx
+
+save(p_sims_res_100, file = here("p_sims_res_100.rda"))
+
+strong_null_true_100 <- p_sims_res_100[["409"]][[1]]
+table(strong_null_true_100$nreject)
+
+strong_null_true_100 %>% filter(nreject > 1)
+
+null_false_100 <- p_sims_res_100[["12655"]][[1]]
+table(null_false_100$nreject)
+table(null_false_100$false_pos_prop)
+table(null_false_100$false_disc_prop)
+summary(null_false_100$false_pos_prop - null_false_100$false_disc_prop)
+
+null_false_100 %>%
+    filter(false_pos_prop > 0) %>%
+    select(nreject, naccept, tot_true0, tot_reject_true0, false_pos_prop, false_disc_prop) %>%
+    mutate(fdr2 = tot_reject_true0 / nreject)
+
+bad_sims <- simsres %>%
+    filter(false_disc_prop > .08 & afn == "fixed (a=.05)" & pfn == "pOneway") %>%
+    select(
+        p_adj_method, pfn, splitfn,
+        nreject, naccept, tot_true0, tot_reject_true0, false_pos_prop, false_disc_prop, tau_sizes, prop_blocks_0
+    ) %>%
+    arrange(desc(false_disc_prop))
+
+bad_sims %>% filter(splitfn == "")
+
+## Idea TODO: Show unadjusted error rates:
+## (1) When all hyp is true FWER should equal FDR
+## (2) When some hyp are not true FDR <= FWER
+## also could dramatize problem of not adjusting
+## TODO: Write a simpler simulation using the 100 block case, ideally using idat_equal_B100
+## TODO: redo data to have blocks size 50 and more Normal y0 ()
+## We want to assess fwer and fdr using the built in p.adjust methods just to figure this out.
+## and holm shuld control both FWER and FDR but fdr should only control FDR
+
+
+
+
+simsres %>%
+    filter(nblocks == 100 & p_adj_method == "fdr" & afn == "fixed (a=.05)" & prop_blocks_0 == 1) %>%
+    select(nreject, naccept, tot_true0, tot_reject_true0, false_pos_prop, false_disc_prop, tau_sizes) %>%
+    arrange(false_disc_prop)
+
+
+res_100 <- simsres %>%
+    filter(nblocks == 100 & p_adj_method == "fdr" & afn == "fixed (a=.05)" & tau_sizes == 2 & prop_blocks_0 == 1) %>%
+    parm_25() <- simparms %>%
+    filter(nblocks == 25 & prop_blocks_0 %in% c(0, 1) & tau_sizes %in% c(0, 1) & afn == "NULL") %>%
+    droplevels() %>%
+    as.data.table()
+
+tmp <- test_and_summarize_fn(parm_25$idx[1], all_sims = TRUE)
+
+p_sims_res_25 <- future_lapply(parm_25$idx,
+    FUN = function(i) {
+        setDTthreads(1)
+        test_and_summarize_fn(i, all_sims = TRUE)
+    }, future.seed = 0xBEEF,
+    future.packages = c("here", "manytestsr"),
+    future.globals = c("test_and_summarize_fn", globals),
+    future.scheduling = Inf,
+    future.chunk.size = NULL
+)
+
+plan(sequential)
+save(p_sims_res_25, file = here("p_sims_res_25.rda"))
 
 
 ## p_sims_res <- lapply(theidx,
