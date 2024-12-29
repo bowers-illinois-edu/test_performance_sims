@@ -112,7 +112,7 @@ sim_ps <- function(num_levels, nodes_per_level, alpha, sims) {
 
 get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
   res <- obj %>%
-    group_by(.data[[paste0("p_", parent_lv)]]) %>%
+    group_by(.data[[paste0("sim_id_level_", parent_lv)]]) %>%
     summarize(mean_fpr = mean(.data[[paste0("node_fpr_", child_lv)]])) %>%
     ungroup()
   ## This is the maximum false positive rate at a given level in the tree
@@ -122,41 +122,54 @@ get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
 #### Now use the simulation function
 
 set.seed(12345)
-test_l10_n2 <- sim_ps(num_levels = 10, nodes_per_level = 2, alpha = .05, sims = 10000)
+num_levs <- 20
+test_l10_n2 <- sim_ps(num_levels = num_levs, nodes_per_level = 2, alpha = .05, sims = 1000)
 save(test_l10_n2, file = "test_l10_n2.rda")
 str(test_l10_n2)
 head(test_l10_n2)
 test_l10_n2 %>% select(starts_with("p"), sim_id_level_0, sim_id_level_1)
-
 ## Only the root level tests <= alpha in p_0
 summary(test_l10_n2$p_0)
 ## We only keep the p_0 if <= alpha.
 length(unique(test_l10_n2$p_0))
 unique(test_l10_n2$node_fpr_0)
 stopifnot(all.equal(length(unique(test_l10_n2$p_0)) / 10000, unique(test_l10_n2$node_fpr_0)))
-
-lvs <- 0:9
+lvs <- seq(0, num_levs - 1)
 res_l10_n2_tmp <- sapply(lvs, function(parent_lv) {
   get_max_fpr(parent_lv = parent_lv, child_lv = parent_lv + 1, obj = test_l10_n2)
 })
 res_l10_n2 <- c(unique(test_l10_n2$node_fpr_0), res_l10_n2_tmp)
-names(res_l10_n2) <- 0:10
+names(res_l10_n2) <- seq(0, num_levs)
 res_l10_n2
 
 ## Now with many more nodes per level
 set.seed(12345)
-test_l3_n20 <- sim_ps(num_levels = 2, nodes_per_level = 20, alpha = .05, sims = 10000)
+num_levs <- 2
+test_l3_n20 <- sim_ps(num_levels = num_levs, nodes_per_level = 20, alpha = .05, sims = 10000)
 save(test_l3_n20, file = "test_l3_n20.rda")
 str(test_l3_n20)
 head(test_l3_n20)
-
-lvs_l3 <- 0:1
+lvs_l3 <- seq(0, num_levs - 1)
 res_l3_n20_tmp <- sapply(lvs_l3, function(parent_lv) {
   get_max_fpr(parent_lv = parent_lv, child_lv = parent_lv + 1, obj = test_l3_n20)
 })
 res_l3_n20 <- c(unique(test_l3_n20$node_fpr_0), res_l3_n20_tmp)
-names(res_l3_n20) <- 0:2
+names(res_l3_n20) <- seq(0, num_levs)
 res_l3_n20
+
+
+set.seed(12345)
+test_l3_n100 <- sim_ps(num_levels = 2, nodes_per_level = 100, alpha = .05, sims = 10000)
+save(test_l3_n100, file = "test_l3_n100.rda")
+str(test_l3_n100)
+head(test_l3_n100)
+lvs_l3 <- 0:1
+res_l3_n100_tmp <- sapply(lvs_l3, function(parent_lv) {
+  get_max_fpr(parent_lv = parent_lv, child_lv = parent_lv + 1, obj = test_l3_n100)
+})
+res_l3_n100 <- c(unique(test_l3_n100$node_fpr_0), res_l3_n100_tmp)
+names(res_l3_n100) <- 0:2
+res_l3_n100
 
 ## Now try to see if there are patterns when we increase number of nodes per level
 node_sim_parms <- sort(unique(c(seq(2, 10, 1), seq(10, 100, 10))))
