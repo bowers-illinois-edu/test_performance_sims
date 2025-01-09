@@ -3,6 +3,8 @@
 library(here)
 library(abind)
 library(tidyverse)
+library(parallel)
+library(future)
 
 #' Simulate P-values on a tree
 #'
@@ -14,7 +16,7 @@ library(tidyverse)
 #' root level.
 #' value
 
-sim_ps <- function(num_levels, nodes_per_level, alpha, sims) {
+sim_ps <- function(num_levels, nodes_per_level, alpha, sims, parallel=FALSE) {
   ## For now, we assume that there are no false nulls. This is a completely no effects world.
   ## should make .05 of values less than .05
   get_child_ps <- function(parent_p, depth) {
@@ -71,14 +73,13 @@ sim_ps <- function(num_levels, nodes_per_level, alpha, sims) {
 
   # with(p_1_dt,plot(p_0,p_1,xlim=c(0,.07),ylim=c(0,.07))); abline(0,1)
 
-  library(parallel)
-  library(future)
-  library(future.apply)
-  ncores <- future::availableCores() - 1
+  ncores <- min(10,future::availableCores() - 1)
   for (i in 2:num_levels) {
-    res <- mclapply(res_list[[i - 1]][[paste0("p_", i - 1)]], function(parent_p) {
-      get_child_ps(parent_p = parent_p, depth = i)
-    }, mc.cores = ncores)
+    if(parallel){
+    res <- mclapply(res_list[[i - 1]][[paste0("p_", i - 1)]], function(parent_p) { get_child_ps(parent_p = parent_p, depth = i) }, mc.cores = ncores)
+  } else {
+    res <- lapply(res_list[[i - 1]][[paste0("p_", i - 1)]], function(parent_p) { get_child_ps(parent_p = parent_p, depth = i) })
+  }
     res_dt <- dplyr::bind_rows(res)
     res_dt[[paste0("sim_id_level_", i - 1)]] <- rep(res_list[[i - 1]][[paste0("sim_id_level_", i - 1)]], each = nodes_per_level)
     res_dt[[paste0("sim_id_level_", i)]] <- paste(res_dt[[paste0("sim_id_level_", i - 1)]], rep(1:nodes_per_level), sep = ".")
@@ -121,19 +122,23 @@ get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
 
 #### Now use the simulation function
 
+2 * sqrt((.05 * (1 - .05)) / 100000)
+
 set.seed(12345)
-num_levs <- 18
-test_l10_n2 <- sim_ps(num_levels = num_levs, nodes_per_level = 2, alpha = .05, sims = 1000)
+num_levs <- 10
+nsims <- 100000
+test_l10_n2 <- sim_ps(num_levels = num_levs, nodes_per_level = 2, alpha = .05, sims = nsims, parallel=FALSE)
 save(test_l10_n2, file = "test_l10_n2.rda")
 str(test_l10_n2)
 head(test_l10_n2)
 test_l10_n2 %>% select(starts_with("p"), sim_id_level_0, sim_id_level_1)
+test_l10_n2 %>% select(starts_with("node"), sim_id_level_0, sim_id_level_1)
 ## Only the root level tests <= alpha in p_0
 summary(test_l10_n2$p_0)
 ## We only keep the p_0 if <= alpha.
 length(unique(test_l10_n2$p_0))
 unique(test_l10_n2$node_fpr_0)
-stopifnot(all.equal(length(unique(test_l10_n2$p_0)) / 10000, unique(test_l10_n2$node_fpr_0)))
+stopifnot(all.equal(length(unique(test_l10_n2$p_0)) / nsims, unique(test_l10_n2$node_fpr_0)))
 lvs <- seq(0, num_levs - 1)
 res_l10_n2_tmp <- sapply(lvs, function(parent_lv) {
   get_max_fpr(parent_lv = parent_lv, child_lv = parent_lv + 1, obj = test_l10_n2)
@@ -145,6 +150,7 @@ res_l10_n2
 ## Now with many more nodes per level
 set.seed(12345)
 num_levs <- 2
+nsims <-10000 
 test_l3_n20 <- sim_ps(num_levels = num_levs, nodes_per_level = 20, alpha = .05, sims = 10000)
 save(test_l3_n20, file = "test_l3_n20.rda")
 str(test_l3_n20)
