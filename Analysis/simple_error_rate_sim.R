@@ -122,7 +122,7 @@ get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
 #### Now use the simulation function
 
 set.seed(12345)
-num_levs <- 20
+num_levs <- 18
 test_l10_n2 <- sim_ps(num_levels = num_levs, nodes_per_level = 2, alpha = .05, sims = 1000)
 save(test_l10_n2, file = "test_l10_n2.rda")
 str(test_l10_n2)
