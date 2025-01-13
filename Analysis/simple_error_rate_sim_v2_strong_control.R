@@ -22,12 +22,12 @@ library(tidyverse)
 library(parallel)
 
 
-# Function to generate Beta random variables with minimum 'a' and maximum 'c'
-beta_with_min <- function(n, alpha, beta, a, c) {
+# Function to generate Beta random variables with minimum 'themin' and maximum 'themax'
+beta_with_min <- function(n, alpha, beta, themin, themax) {
   # Generate standard Beta random variables
   x <- rbeta(n, shape1 = alpha, shape2 = beta)
   # Transform to desired range
-  y <- a + (c - a) * x
+  y <- themin + (themax - themin) * x
   return(y)
 }
 
