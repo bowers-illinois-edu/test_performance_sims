@@ -1,26 +1,42 @@
+# Functions to draw p-values from known distributions on tree structures
+
 library(tidyverse)
 library(tidygraph)
 library(ggraph)
+library(testthat)
 
-#' Draw Beta random variables in [themin, themax].
+#' Draw beta_b random variables in [themin, themax].
 #'
+#' This function represents p-values from false null hypotheses. That is, non-zero treatment effects.
 #' @param n number of draws
-#' @param alpha,beta shape parameters for Beta
+#' @param beta_a,beta_b shape parameters for beta_b
 #' @param themin,themax numeric boundaries of range
 #'
-#' @return A numeric vector of length n
-beta_with_min <- function(n, alpha = 0.1, beta = 1, themin = 0, themax = 1) {
-  x <- stats::rbeta(n, shape1 = alpha, shape2 = beta)
+#' @return A numeric vector of length n between themin  and themax
+beta_b_with_min <- function(n, beta_a = 0.1, beta_b = 1, themin = 0, themax = 1) {
+  x <- stats::rbeta(n, shape1 = beta_a, shape2 = beta_b)
   y <- themin + (themax - themin) * x
   return(y)
 }
 
-#' Build a k-ary tree of depth L, and randomly assign some leaves as TRUE.
-#' Then propagate TRUE up to the root. Also label the nodes.
+#' Draw Uniform random variables in [themin, themax].
 #'
-#' @param k integer, the branching factor (number of children per node).
+#' This function represents p-values from true null hypotheses. That is, zero treatment effects.
+#' @param n number of draws
+#' @param beta_a,beta_b shape parameters for beta_b
+#' @param themin,themax numeric boundaries of range
+#'
+#' @return A numeric vector of length n between themin and themax
+uniform_with_min <- function(n, themin = 0, themax = 1) {
+  return(runif(n, min = themin, max = themax))
+}
+
+#' Build a k-ary tree of depth L, and randomly assign some leaves as TRUE.
+#' Then propagate TRUE up to the root. Also label the nodes to reflect their relationships. A TRUE node has a non-zero treatment effect.
+#'
+#' @param k integer, number of children per node.
 #' @param L integer, the number of levels (root is level 1, leaves are level L).
-#' @param prop_false numeric in [0,1], fraction of leaves to mark as TRUE.
+#' @param prop_tau_nonzero numeric in [0,1], fraction of leaves to mark as TRUE.
 #'
 #' @return A data.frame with columns:
 #'   \itemize{
@@ -28,10 +44,10 @@ beta_with_min <- function(n, alpha = 0.1, beta = 1, themin = 0, themax = 1) {
 #'     \item label (character, e.g. "lv_0", "lv_1", "lv_1_1", etc.)
 #'     \item has_false_hyp (logical, TRUE or FALSE)
 #'   }
-assign_false_H_with_labels <- function(k, L, prop_false = 0.3) {
+assign_false_H_with_labels <- function(k, L, prop_tau_nonzero = 0.3) {
   if (k < 1) stop("k must be >= 1")
   if (L < 1) stop("L must be >= 1")
-  if (prop_false < 0 || prop_false > 1) stop("prop_false must be in [0,1]")
+  if (prop_tau_nonzero < 0 || prop_tau_nonzero > 1) stop("prop_tau_nonzero must be in [0,1]")
 
   # Total number of nodes
   total_nodes <- (k^L - 1) / (k - 1)
@@ -41,7 +57,7 @@ assign_false_H_with_labels <- function(k, L, prop_false = 0.3) {
   num_leaves <- k^(L - 1)
 
   # Mark some leaves as TRUE
-  num_selected <- floor(prop_false * num_leaves)
+  num_selected <- floor(prop_tau_nonzero * num_leaves)
   selected_leaves <- sample.int(num_leaves, size = num_selected, replace = FALSE)
 
   # Initialize
@@ -52,6 +68,9 @@ assign_false_H_with_labels <- function(k, L, prop_false = 0.3) {
   # Propagate TRUE up to the root
   for (i in seq.int(total_nodes, 2)) {
     if (has_false_hyp[i]) {
+      ## Notice how the formula to identify the parent of a given node works (here with k=4 and L=3)
+      ## > floor((seq(2,21) - 2)/k)+1
+      ##  [1] 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5 5 5
       parent_i <- floor((i - 2) / k) + 1L
       has_false_hyp[parent_i] <- TRUE
     }
@@ -97,42 +116,42 @@ assign_false_H_with_labels <- function(k, L, prop_false = 0.3) {
 #' BFS Approach: Given a k-ary tree data frame (from assign_false_H_with_labels),
 #' draw a random value for each node, with the min determined by parent's value.
 #'
-#' - If a node is TRUE, we draw from Beta_with_min().
+#' - If a node is TRUE, we draw from beta_b_with_min().
 #' - If a node is FALSE, we draw from Uniform().
 #'
 #' The root uses themin=0 (or user-provided p0_min) for the initial draw range.
 #'
 #' @param tree_df data.frame with columns (node_id, label, has_false_hyp).
 #' @param k branching factor.
-#' @param alpha,beta shape parameters for Beta.
+#' @param beta_a,beta_b shape parameters for beta_b.
 #' @param p0_min numeric, the minimum for the root node's random draw (default 0).
-#' @return The same data frame, but with an extra column "rand_value".
+#' @return The same data frame, but with an extra column "p".
 draw_values_along_tree <- function(tree_df,
                                    k,
-                                   alpha = 0.1,
-                                   beta = 1,
+                                   beta_a = 0.1,
+                                   beta_b = 1,
                                    p0_min = 0) {
   n <- nrow(tree_df)
 
-  rand_value <- numeric(n)
+  p <- numeric(n)
 
   # BFS queue
   queue <- 1L # root is node_id=1
   # Root draw
   if (tree_df$has_false_hyp[1]) {
-    rand_value[1] <- beta_with_min(
-      n = 1, alpha = alpha, beta = beta,
+    p[1] <- beta_b_with_min(
+      n = 1, beta_a = beta_a, beta_b = beta_b,
       themin = p0_min, themax = 1
     )
   } else {
-    rand_value[1] <- runif(1, min = p0_min, max = 1)
+    p[1] <- runif(1, min = p0_min, max = 1)
   }
 
   while (length(queue) > 0) {
     node <- queue[1]
     queue <- queue[-1]
 
-    val_parent <- rand_value[node]
+    val_parent <- p[node]
     child_start <- (node - 1) * k + 2
     child_end <- node * k + 1
 
@@ -141,14 +160,14 @@ draw_values_along_tree <- function(tree_df,
 
       for (child in seq(child_start, child_end)) {
         if (tree_df$has_false_hyp[child]) {
-          # Beta
-          rand_value[child] <- beta_with_min(
-            n = 1, alpha = alpha, beta = beta,
+          # beta_b
+          p[child] <- beta_b_with_min(
+            n = 1, beta_a = beta_a, beta_b = beta_b,
             themin = val_parent, themax = 1
           )
         } else {
           # Uniform
-          rand_value[child] <- runif(1, min = val_parent, max = 1)
+          p[child] <- runif(1, min = val_parent, max = 1)
         }
       }
       # Enqueue children
@@ -158,7 +177,7 @@ draw_values_along_tree <- function(tree_df,
 
   # Add column to data frame
   out <- tree_df
-  out$rand_value <- rand_value
+  out$p <- p
   return(out)
 }
 
@@ -167,8 +186,8 @@ draw_values_along_tree <- function(tree_df,
 #'
 #' @param k branching factor
 #' @param L number of levels
-#' @param prop_false fraction of leaves to assign as TRUE
-#' @param alpha,beta shape parameters for Beta
+#' @param prop_tau_nonzero fraction of leaves to assign as TRUE
+#' @param beta_a,beta_b shape parameters for beta_b
 #' @param p0_min numeric, the min for the root node's range (default=0).
 #'
 #' @return A data frame with columns:
@@ -176,80 +195,83 @@ draw_values_along_tree <- function(tree_df,
 #'     \item node_id
 #'     \item label
 #'     \item has_false_hyp
-#'     \item rand_value
+#'     \item p
 #'   }
 #'
 #' @examples
 #' set.seed(123)
-#' df <- generate_tree_data(k = 2, L = 3, prop_false = 0.4)
+#' df <- generate_tree_data(k = 2, L = 3, prop_tau_nonzero = 0.4)
 #' df
-generate_tree_data_bfs <- function(k, L, prop_false = 0.3,
-                                   alpha = 0.1, beta = 1,
+generate_tree_data_bfs <- function(k, L, prop_tau_nonzero = 0.3,
+                                   beta_a = 0.1, beta_b = 1,
                                    p0_min = 0) {
   # Step 1 & 2: build tree, assign T/F
-  tree_df <- assign_false_H_with_labels(k, L, prop_false)
+  tree_df <- assign_false_H_with_labels(k, L, prop_tau_nonzero)
 
   # Step 3 & 4: draw random values
-  out <- draw_values_along_tree(tree_df, k, alpha, beta, p0_min)
+  out <- draw_values_along_tree(tree_df, k, beta_a, beta_b, p0_min)
   return(out)
 }
 
 ## Example:
-## If node is TRUE, this means draw from Beta (i.e. true treatment effect)
 set.seed(101)
-df_bfs <- generate_tree_data_bfs(k = 4, L = 3, prop_false = 0.6, alpha = 0.5, beta = 2, p0_min = 0)
-df_bfs %>% arrange(node_id)
-
-# test-generate_tree_data.R
-library(testthat)
+## Here, half of the leaves have non-zero treatment effects and the test is very powerful (beta_b(.1,1)) -- only about 25% of draws over .05 (i.e. 75% power)
+df_bfs_half_true <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.1, beta_b = 1, p0_min = 0)
+df_bfs_half_true %>% arrange(node_id)
+## A situation where no leaves have true effects. All draws should be from uniform.
+df_bfs_all_null <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.1, beta_b = 1, p0_min = 0)
+df_bfs_all_null %>% arrange(node_id)
 
 test_that("generate_tree_data produces correct shape of output", {
   set.seed(123)
   k <- 4
   L <- 3
-  prop_false <- 0.4
+  prop_tau_nonzero <- 0.4
 
   df_test <- generate_tree_data_bfs(
-    k = k, L = L, prop_false = prop_false,
-    alpha = 0.1, beta = 1, p0_min = 0
+    k = k, L = L, prop_tau_nonzero = prop_tau_nonzero,
+    beta_a = 0.1, beta_b = 1, p0_min = 0
   )
 
   # total nodes
   total_nodes <- (k^L - 1) / (k - 1)
   expect_equal(nrow(df_test), total_nodes)
-  expect_setequal(names(df_test), c("node_id", "label", "has_false_hyp", "rand_value"))
+  expect_setequal(names(df_test), c("node_id", "label", "has_false_hyp", "p"))
 
   # root is node_id=1
   # if any leaf is TRUE, the root is forced to TRUE
-  # but if prop_false=0, we could have a root=FALSE
-  # For this test, with prop_false=0.4,  let's see if root ended up being TRUE:
+  # but if prop_tau_nonzero=0, we could have a root=FALSE
+  # For this test, with prop_tau_nonzero=0.4,  let's see if root ended up being TRUE:
   # (We won't rely on it, but let's just check that it's indeed a logical)
-  expect_type(df$has_false_hyp, "logical")
+  expect_type(df_test$has_false_hyp, "logical")
 
-  # check rand_value is numeric, all in [0,1]
-  expect_type(df$rand_value, "double")
-  expect_true(all(df$rand_value >= 0 & df$rand_value <= 1))
+  # check p is numeric, all in [0,1]
+  expect_type(df_test$p, "double")
+  expect_true(all(df_test$p >= 0 & df_test$p <= 1))
 
-  # check that if node is T, child is drawn from Beta with min = parent's val
+  # check that if node is T, child is drawn from beta_b with min = parent's val
   # if node is F, child is from Uniform with min = parent's val
   # We won't do a super rigorous test, but we can do quick checks here to ensure that the child p is >= parent p:
 
-  for (i in 2:nrow(df)) {
+  for (i in 2:nrow(df_test)) {
+    i <- 2
     parent_i <- floor((i - 2) / k) + 1
     # child's value >= parent's value
-    expect_true(df$rand_value[i] >= df$rand_value[parent_i],
-      info = paste0("Child rand_value < parent at i=", i)
+    expect_true(df_test$p[i] >= df_test$p[parent_i],
+      info = paste0("Child p < parent at i=", i)
     )
   }
 })
 
+##### Now, for performance, try using the Depth First Search (dfs) algorithm
 
-#' Assign T/F to leaves in a k-ary tree (prop_false fraction = TRUE),
-#' propagate TRUE to the root, and label nodes with DFS.
+
+#' Assign T/F to leaves in a k-ary tree (prop_tau_nonzero fraction = TRUE),
+#' propagate TRUE to the root, and label nodes with dfs.
 #'
 #' @param k integer, branching factor (# children per non-leaf node).
 #' @param L integer, number of levels (root is level 1, leaves are level L).
-#' @param prop_false numeric in [0,1], fraction of leaves to set as TRUE.
+#' @param prop_tau_nonzero numeric in [0,1], fraction of leaves to set as TRUE.
 #'
 #' @return A data.frame with columns:
 #'   \itemize{
@@ -257,11 +279,11 @@ test_that("generate_tree_data produces correct shape of output", {
 #'     \item \code{label} (character, e.g. "lv_0", "lv_0_1", "lv_0_1_1", etc.)
 #'     \item \code{has_false_hyp} (logical, TRUE/FALSE)
 #'   }
-assign_false_H_with_labels_DFS <- function(k, L, prop_false) {
+assign_false_H_with_labels_dfs <- function(k, L, prop_tau_nonzero) {
   if (k < 1) stop("k must be >= 1.")
   if (L < 1) stop("L must be >= 1.")
-  if (prop_false < 0 || prop_false > 1) {
-    stop("prop_false must be in [0,1].")
+  if (prop_tau_nonzero < 0 || prop_tau_nonzero > 1) {
+    stop("prop_tau_nonzero must be in [0,1].")
   }
 
   # Total number of nodes in a complete k-ary tree
@@ -272,7 +294,7 @@ assign_false_H_with_labels_DFS <- function(k, L, prop_false) {
   num_leaves <- k^(L - 1)
 
   # Randomly assign some leaves as TRUE
-  num_selected <- floor(prop_false * num_leaves)
+  num_selected <- floor(prop_tau_nonzero * num_leaves)
   selected_leaves <- sample.int(num_leaves, size = num_selected, replace = FALSE)
 
   # Logical vector: all start as FALSE
@@ -292,7 +314,7 @@ assign_false_H_with_labels_DFS <- function(k, L, prop_false) {
     }
   }
 
-  # Now we label the nodes with a DFS approach.
+  # Now we label the nodes with a dfs approach.
   labels <- character(total_nodes)
   # Root is node 1
   # We'll push (node, label_for_node) onto a stack
@@ -339,24 +361,24 @@ assign_false_H_with_labels_DFS <- function(k, L, prop_false) {
 }
 
 
-#' Draw random values along the k-ary tree using a DFS approach.
+#' Draw random values along the k-ary tree using a dfs approach.
 #'
-#' - If node is TRUE => Beta distribution in [parent_val, 1].
+#' - If node is TRUE => beta_b distribution in [parent_val, 1].
 #' - If node is FALSE => Uniform distribution in [parent_val, 1].
 #'
 #' @param tree_df data.frame with columns (node_id, label, has_false_hyp).
 #' @param k branching factor
-#' @param alpha,beta shape parameters for Beta
+#' @param beta_a,beta_b shape parameters for beta_b
 #' @param p0_min numeric, the minimum for the root node's range
 #'
-#' @return The same data frame + a new numeric column "rand_value".
-draw_values_along_tree_DFS <- function(tree_df,
+#' @return The same data frame + a new numeric column "p".
+draw_values_along_tree_dfs <- function(tree_df,
                                        k,
-                                       alpha = 0.1,
-                                       beta = 1,
+                                       beta_a = 0.1,
+                                       beta_b = 1,
                                        p0_min = 0) {
   n <- nrow(tree_df)
-  rand_value <- numeric(n)
+  p <- numeric(n)
 
   # We'll use a stack of (node, parent_val)
   # For the root (node=1), parent_val = p0_min
@@ -371,17 +393,11 @@ draw_values_along_tree_DFS <- function(tree_df,
 
     # Draw the random value for this node
     if (tree_df$has_false_hyp[node]) {
-      # Beta
-      rand_value[node] <- beta_with_min(
-        n      = 1,
-        alpha  = alpha,
-        beta   = beta,
-        themin = parent_val,
-        themax = 1
-      )
+      # beta_b
+      p[node] <- beta_b_with_min(n = 1, beta_a = beta_a, beta_b = beta_b, themin = parent_val, themax = 1)
     } else {
       # Uniform
-      rand_value[node] <- runif(1, min = parent_val, max = 1)
+      p[node] <- runif(1, min = parent_val, max = 1)
     }
 
     # Now push children, if any
@@ -393,26 +409,26 @@ draw_values_along_tree_DFS <- function(tree_df,
       for (child in seq(child_end, child_start, by = -1)) {
         stack[[length(stack) + 1]] <- list(
           node = child,
-          parent_val = rand_value[node]
+          parent_val = p[node]
         )
       }
     }
   }
 
   out <- tree_df
-  out$rand_value <- rand_value
+  out$p <- p
   return(out)
 }
 
 
-#' Generate data from a k-ary tree using DFS:
-#' 1) Assign T/F at leaves, propagate up, label by DFS.
-#' 2) Draw random values by DFS from root to leaves.
+#' Generate data from a k-ary tree using dfs:
+#' 1) Assign T/F at leaves, propagate up, label by dfs.
+#' 2) Draw random values by dfs from root to leaves.
 #'
 #' @param k branching factor
 #' @param L number of levels
-#' @param prop_false fraction of leaves to be TRUE
-#' @param alpha,beta shape parameters for Beta
+#' @param prop_tau_nonzero fraction of leaves to be TRUE
+#' @param beta_a,beta_b shape parameters for beta_b
 #' @param p0_min numeric, min for the root's distribution (default=0)
 #'
 #' @return A data frame with columns:
@@ -420,80 +436,197 @@ draw_values_along_tree_DFS <- function(tree_df,
 #'     \item node_id
 #'     \item label
 #'     \item has_false_hyp
-#'     \item rand_value
+#'     \item p
 #'   }
 #'
 #' @examples
 #' set.seed(42)
-#' df <- generate_tree_data_DFS(k = 2, L = 3, prop_false = 0.5, alpha = 0.5, beta = 2, p0_min = 0)
+#' df <- generate_tree_data_dfs(k = 2, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.5, beta_b = 2, p0_min = 0)
 #' df
-generate_tree_data_DFS <- function(k, L, prop_false,
-                                   alpha = 0.1,
-                                   beta = 1,
+generate_tree_data_dfs <- function(k, L, prop_tau_nonzero,
+                                   beta_a = 0.1,
+                                   beta_b = 1,
                                    p0_min = 0) {
-  # Step 1: Build tree & assign T/F, label nodes by DFS
-  tree_df <- assign_false_H_with_labels_DFS(k, L, prop_false)
+  # Step 1: Build tree & assign T/F, label nodes by dfs
+  tree_df <- assign_false_H_with_labels_dfs(k, L, prop_tau_nonzero)
 
-  # Step 2: Draw random values by DFS
-  out <- draw_values_along_tree_DFS(tree_df, k, alpha, beta, p0_min)
+  # Step 2: Draw random values by dfs
+  out <- draw_values_along_tree_dfs(tree_df, k, beta_a, beta_b, p0_min)
   return(out)
 }
 
-# test-generate_tree_data_DFS.R
-# library(testthat)
 
-test_that("DFS-based tree generation works for a small example", {
+test_that("dfs-based tree generation works for a small example", {
   set.seed(101)
   k <- 2
   L <- 3
-  prop_false <- 0.4
+  prop_tau_nonzero <- 0.4
 
-  df <- generate_tree_data_DFS(
-    k          = k,
-    L          = L,
-    prop_false = prop_false,
-    alpha      = 0.5,
-    beta       = 2,
-    p0_min     = 0
+  df <- generate_tree_data_dfs(
+    k = k,
+    L = L,
+    prop_tau_nonzero = prop_tau_nonzero,
+    beta_a = 0.5,
+    beta_b = 2,
+    p0_min = 0
   )
 
   # total nodes
   total_nodes <- (k^L - 1) / (k - 1)
   expect_equal(nrow(df), total_nodes)
-  expect_true(all(c("node_id", "label", "has_false_hyp", "rand_value") %in% names(df)))
+  expect_true(all(c("node_id", "label", "has_false_hyp", "p") %in% names(df)))
 
-  # rand_value in [0,1]
-  expect_true(all(df$rand_value >= 0 & df$rand_value <= 1))
+  # p in [0,1]
+  expect_true(all(df$p >= 0 & df$p <= 1))
 
-  # If child is TRUE => Beta in [parent_val,1]. If child is FALSE => Uniform in [parent_val,1].
+  # If child is TRUE => beta_b in [parent_val,1]. If child is FALSE => Uniform in [parent_val,1].
   # We'll do a quick check that child's value >= parent's value.
   for (i in 2:total_nodes) {
     parent_i <- floor((i - 2) / k) + 1
-    expect_true(df$rand_value[i] >= df$rand_value[parent_i],
-      info = paste("Child rand_value < parent's at node", i)
+    expect_true(df$p[i] >= df$p[parent_i],
+      info = paste("Child p < parent's at node", i)
     )
   }
 })
 
 
 ## Example:
-## If node is TRUE, this means draw from Beta (i.e. true treatment effect)
+## If node is TRUE, this means draw from beta_b (i.e. true treatment effect)
 set.seed(101)
-df_bfs <- generate_tree_data_bfs(k = 4, L = 3, prop_false = 0.4, alpha = 0.1, beta = 1, p0_min = 0)
-df_bfs %>% arrange(node_id)
-
+df_dfs_half_true <- generate_tree_data_dfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.2, beta_b = 1, p0_min = 0)
+df_dfs_half_true %>% arrange(node_id)
 set.seed(101)
-df_dfs <- generate_tree_data_DFS(k = 4, L = 3, prop_false = 0.4, alpha = 0.1, beta = 1, p0_min = 0)
-df_dfs %>% arrange(node_id)
+df_dfs_all_null <- generate_tree_data_dfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.2, beta_b = 1, p0_min = 0)
+df_dfs_all_null %>% arrange(node_id)
 
-stopifnot(nrow(df_bfs) == nrow(df_dfs))
-stopifnot(df_bfs$label == df_dfs$label)
-stopifnot(df_bfs$has_false_hyp == df_dfs$has_false_hyp)
+### Compare to the BFS version:
+set.seed(101)
+df_bfs_half_true <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.2, beta_b = 1, p0_min = 0)
+df_bfs_half_true %>% arrange(node_id)
+set.seed(101)
+df_bfs_all_null <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.2, beta_b = 1, p0_min = 0)
+df_bfs_all_null %>% arrange(node_id)
+
+## The two approaches to setting up the tree are the same.
+stopifnot(nrow(df_bfs_half_true) == nrow(df_dfs_half_true))
+stopifnot(nrow(df_bfs_all_null) == nrow(df_dfs_all_null))
+stopifnot(df_bfs_half_true$label == df_dfs_half_true$label)
+stopifnot(df_bfs_all_null$label == df_dfs_all_null$label)
+stopifnot(df_bfs_half_true$has_false_hyp == df_dfs_half_true$has_false_hyp)
+stopifnot(df_bfs_all_null$has_false_hyp == df_dfs_all_null$has_false_hyp)
+
+## The two approaches yield different results in regards the p-values because they draw in different orders.
+## the p_0 is the same and p_1 is the same
+df_all_null <- full_join(df_bfs_all_null, df_dfs_all_null, by = c("label"), suffix = c("_bfs", "_dfs"))
+df_all_null %>% dplyr::select(node_id_bfs, label, has_false_hyp_bfs, p_bfs, p_dfs)
+
+df_half_true <- full_join(df_bfs_half_true, df_dfs_half_true, by = c("label"), suffix = c("_bfs", "_dfs"))
+df_half_true %>% dplyr::select(node_id_bfs, label, has_false_hyp_bfs, p_bfs, p_dfs)
+
+## for example, p=.03141 for lv_2 (2nd node of level 2 --- the first level
+## under the root using bfs) and for lv_1_1 (the first node of the second level
+## under the root, level 3). I don't have reason to believe that either is more
+## or less valid at this point. Try them out in simulations.
+
+bfs_test <- function(k, L, prop_tau_nonzero, beta_a, beta_b) {
+  res <- generate_tree_data_bfs(k = k, L = L, prop_tau_nonzero = prop_tau_nonzero, beta_a = beta_a, beta_b = beta_b, p0_min = 0)
+  any(res$p[!res$has_false_hyp] <= .05)
+}
+
+dfs_test <- function(k, L, prop_tau_nonzero, beta_a, beta_b) {
+  res <- generate_tree_data_dfs(k = k, L = L, prop_tau_nonzero = prop_tau_nonzero, beta_a = beta_a, beta_b = beta_b, p0_min = 0)
+  any(res$p[!res$has_false_hyp] <= .05)
+}
+
+## So, BFS versus DFS doesn't matter when all are null.
+set.seed(12345)
+fpr_bfs <- replicate(1000, bfs_test(k = 3, L = 4, prop_tau_nonzero = 0, beta_a = .2, beta_b = 1))
+mean(fpr_bfs)
+fpr_dfs <- replicate(1000, dfs_test(k = 3, L = 4, prop_tau_nonzero = 0, beta_a = .2, beta_b = 1))
+mean(fpr_dfs)
+
+## Also looks correct when we have a mix of true and false nulls
+set.seed(12345)
+fpr_bfs_some_null <- replicate(1000, bfs_test(k = 3, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_bfs_some_null)
+fpr_dfs_some_null <- replicate(1000, dfs_test(k = 3, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_dfs_some_null)
+
+## Also the return the same kind of results when we have many more nodes per level. (i.e. we have a control problem)
+set.seed(12345)
+
+# (k^L - 1) / (k - 1)
+(10^2 - 1) / (10 - 1)
+fpr_bfs_some_null_k10_l2 <- replicate(1000, bfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_bfs_some_null_k10_l2)
+fpr_dfs_some_null_k10_l2 <- replicate(1000, dfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_dfs_some_null_k10_l2)
+
+# (k^L - 1) / (k - 1)
+(100^2 - 1) / (100 - 1)
+fpr_bfs_some_null_k100_l2 <- replicate(1000, bfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_bfs_some_null_k100_l2)
+fpr_dfs_some_null_k100_l2 <- replicate(1000, dfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_dfs_some_null_k100_l2)
+
+(2^10 - 1) / (2 - 1)
+fpr_bfs_some_null_k2_l10 <- replicate(1000, bfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_bfs_some_null_k2_l10)
+fpr_dfs_some_null_k2_l10 <- replicate(1000, dfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+mean(fpr_dfs_some_null_k2_l10)
 
 
-## The two approaches yield different results
-df_big <- left_join(df_bfs, df_dfs, by = c("label"), suffix = c("_bfs", "_dfs"))
-df_big
+
+sim_parms <- expand.grid(
+  k = sort(unique(c(seq(2, 20), 100))),
+  l = sort(unique(c(seq(2, 20), 100)))
+)
+sim_parms$total_nodes <- with(sim_parms, (k^l - 1) / (k <- 1))
+sim_parms <- sim_parms %>% filter(total_nodes < 1e+6)
+
+library(parallel)
+res <- mclapply(1:nrow(sim_parms), function(i) {
+  parms <- sim_parms[i, ]
+  message(parms)
+  res <- replicate(1000, bfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+  return(c(parms, mean(res)))
+}, mc.cores = 10)
+save(res, file = "res_weak.rda")
+res_dts <- lapply(res, function(lst) {
+  tmp <- as.data.frame(lst)
+  names(tmp)[4] <- "FWER"
+  return(tmp)
+})
+res_dt <- bind_rows(res_dts, .id = "sim_id")
+
+## Start here: I think that BFS is better until l > 10  for small k.
+library(microbenchmark)
+
+(10^4 - 1) / (10 - 1)
+(4^10 - 1) / (4 - 1)
+
+benches <- microbenchmark(
+  bfs_k10_l2 = bfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k10_l2 = dfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k2_l10 = bfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k2_l10 = dfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k4_l4 = bfs_test(k = 4, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k4_l4 = dfs_test(k = 4, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k4_l6 = bfs_test(k = 4, L = 6, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k4_l6 = dfs_test(k = 4, L = 6, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k100_l2 = bfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k100_l2 = dfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k20_l2 = bfs_test(k = 20, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k20_l2 = dfs_test(k = 20, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  bfs_k2_l15 = bfs_test(k = 2, L = 15, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  dfs_k2_l15 = dfs_test(k = 2, L = 15, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
+  times = 10L
+)
+benches
+
+
+##### Reporting and Ploting Functions
+
 
 #' Plot a k-ary tree (from assign_false_H_with_labels) using ggraph.
 #'
@@ -507,13 +640,13 @@ df_big
 #' @param layout Character string specifying the layout in \code{ggraph}.
 #'   Defaults to \code{"tree"}. Other options include \code{"dendrogram"},
 #'   \code{"circlepack"}, etc.
-#' @param flip_tree Logical. If \code{TRUE}, flip the tree vertically (root at top).
+#' @param flip_tree Log10ical. If \code{TRUE}, flip the tree vertically (root at top).
 #'   Defaults to \code{FALSE}.
 #'
 #' @return A \code{ggplot} object which, when printed, displays the tree.
 #'
 #' @examples
-#' # Suppose df is from assign_false_H_with_labels(k=2, L=3, prop_false=0.4)
+#' # Suppose df is from assign_false_H_with_labels(k=2, L=3, prop_tau_nonzero=0.4)
 #' # plot_kary_tree(df, nodes_per_level=2)
 plot_kary_tree <- function(df, nodes_per_level, layout = "tree", flip_tree = FALSE) {
   if (!requireNamespace("tidygraph", quietly = TRUE)) {
@@ -552,7 +685,7 @@ plot_kary_tree <- function(df, nodes_per_level, layout = "tree", flip_tree = FAL
     ) +
     geom_node_point(aes(color = has_false_hyp), size = 5) +
     geom_node_text(aes(label = label), vjust = -0.8, size = 3.5) +
-    geom_node_text(aes(label = round(rand_value, 2)), vjust = 0.8, size = 3.5) +
+    geom_node_text(aes(label = round(p, 2)), vjust = 0.8, size = 3.5) +
     # Map TRUE -> red, FALSE -> blue:
     scale_color_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
     theme(
