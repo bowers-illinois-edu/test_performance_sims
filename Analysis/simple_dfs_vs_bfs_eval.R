@@ -108,13 +108,13 @@ stopifnot(abs(mean(fpr_bfs_some_null_k2_l10) - mean(fpr_dfs_some_null_k2_l10)) <
 
 sim_parms <- expand.grid(
   k = sort(unique(c(seq(2, 20, 2), 100))),
-  l = sort(unique(c(seq(2, 20, 2), 100)))
+  l = sort(unique(c(seq(2, 16, 2), 100)))
 )
 sim_parms$total_nodes <- with(sim_parms, (k^l - 1) / (k <- 1))
 sim_parms <- sim_parms %>% filter(total_nodes < 1e+6)
 
 data_path <- file.path(here(), "CSVS")
-nsims <- 10
+nsims <- 1000
 library(parallel)
 ncores <- future::availableCores()
 res <- mclapply(1:nrow(sim_parms), function(i) {
