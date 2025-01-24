@@ -7,12 +7,15 @@ library(testthat)
 
 #' Draw beta_b random variables in [themin, themax].
 #'
-#' This function represents p-values from false null hypotheses. That is, non-zero treatment effects.
-#' @param n number of draws
-#' @param beta_a,beta_b shape parameters for beta_b
+#' This function represents p-values from false null hypotheses. That is,
+#' non-zero treatment effects. The default alues for beta_a and beta_b
+#' represent a very powerful treatment effect, one that should be easy to
+#' detect if it exists.
+#'
+#' @param n number of draws @param beta_a,beta_b shape parameters for beta_b
 #' @param themin,themax numeric boundaries of range
 #'
-#' @return A numeric vector of length n between themin  and themax
+#' @return A numeric vector of length n with values between themin  and themax
 beta_b_with_min <- function(n, beta_a = 0.1, beta_b = 1, themin = 0, themax = 1) {
   x <- stats::rbeta(n, shape1 = beta_a, shape2 = beta_b)
   y <- themin + (themax - themin) * x
@@ -22,28 +25,33 @@ beta_b_with_min <- function(n, beta_a = 0.1, beta_b = 1, themin = 0, themax = 1)
 #' Draw Uniform random variables in [themin, themax].
 #'
 #' This function represents p-values from true null hypotheses. That is, zero treatment effects.
+#'
 #' @param n number of draws
 #' @param beta_a,beta_b shape parameters for beta_b
 #' @param themin,themax numeric boundaries of range
 #'
-#' @return A numeric vector of length n between themin and themax
+#' @return A numeric vector of length n with values between themin and themax
 uniform_with_min <- function(n, themin = 0, themax = 1) {
   return(runif(n, min = themin, max = themax))
 }
 
 #' Build a k-ary tree of depth L, and randomly assign some leaves as TRUE.
-#' Then propagate TRUE up to the root. Also label the nodes to reflect their relationships. A TRUE node has a non-zero treatment effect.
 #'
-#' @param k integer, number of children per node.
+#' Given some random leaves (nodes with no children) labeled TRUE then
+#' propagate TRUE up to the root. Also label the nodes to reflect their
+#' relationships. A TRUE node has a non-zero treatment effect.
+#'
+#' @param k integer, number of children per node that are not leaves.
 #' @param L integer, the number of levels (root is level 1, leaves are level L).
 #' @param prop_tau_nonzero numeric in [0,1], fraction of leaves to mark as TRUE.
 #'
 #' @return A data.frame with columns:
-#'   \itemize{
-#'     \item node_id (1-based ID in array representation)
-#'     \item label (character, e.g. "lv_0", "lv_1", "lv_1_1", etc.)
-#'     \item has_false_hyp (logical, TRUE or FALSE)
-#'   }
+#' \itemize{
+#' \item node_id (1-based ID in array representation)
+#' \item label (character, e.g. "lv_0", "lv_1", "lv_1_1", etc.)
+#'  \item has_false_hyp (logical, TRUE or FALSE)
+#'  }
+#'
 assign_false_H_with_labels <- function(k, L, prop_tau_nonzero = 0.3) {
   if (k < 1) stop("k must be >= 1")
   if (L < 1) stop("L must be >= 1")
@@ -56,11 +64,11 @@ assign_false_H_with_labels <- function(k, L, prop_tau_nonzero = 0.3) {
   # Number of leaves
   num_leaves <- k^(L - 1)
 
-  # Mark some leaves as TRUE
+  # Select some leaves to have true treatment effects
   num_selected <- floor(prop_tau_nonzero * num_leaves)
   selected_leaves <- sample.int(num_leaves, size = num_selected, replace = FALSE)
 
-  # Initialize
+  # Initialize (here TRUE means that there is a true treatment effect or a false null hypothesis of no effects)
   has_false_hyp <- logical(total_nodes) # all FALSE
   leaf_start <- total_nodes - num_leaves + 1
   has_false_hyp[leaf_start + selected_leaves - 1] <- TRUE
@@ -80,12 +88,11 @@ assign_false_H_with_labels <- function(k, L, prop_tau_nonzero = 0.3) {
   labels <- character(total_nodes)
   labels[1] <- "lv_0"
 
-  # BFS labeling
+  # Using Breadth First Search (BFS) for the labeling (i.e. go level by level)
   queue <- 1L
   while (length(queue) > 0) {
     node <- queue[1]
     queue <- queue[-1]
-
     child_start <- (node - 1) * k + 2
     child_end <- node * k + 1
     if (child_start <= total_nodes) {
@@ -126,11 +133,11 @@ assign_false_H_with_labels <- function(k, L, prop_tau_nonzero = 0.3) {
 #' @param beta_a,beta_b shape parameters for beta_b.
 #' @param p0_min numeric, the minimum for the root node's random draw (default 0).
 #' @return The same data frame, but with an extra column "p".
-draw_values_along_tree <- function(tree_df,
-                                   k,
-                                   beta_a = 0.1,
-                                   beta_b = 1,
-                                   p0_min = 0) {
+draw_values_along_tree_bfs <- function(tree_df,
+                                       k,
+                                       beta_a = 0.1,
+                                       beta_b = 1,
+                                       p0_min = 0) {
   n <- nrow(tree_df)
 
   p <- numeric(n)
@@ -151,6 +158,7 @@ draw_values_along_tree <- function(tree_df,
     node <- queue[1]
     queue <- queue[-1]
 
+    ## Here val_parent becomes themin of the given draw to enforce monotonicity
     val_parent <- p[node]
     child_start <- (node - 1) * k + 2
     child_end <- node * k + 1
@@ -182,12 +190,12 @@ draw_values_along_tree <- function(tree_df,
 }
 
 #' BFS Approach: Generate a k-ary tree with T/F assignment and random draws
-#' according to the rules described in the question.
+#' from beta or uniform distributions depending on the T/F assignment
 #'
 #' @param k branching factor
 #' @param L number of levels
 #' @param prop_tau_nonzero fraction of leaves to assign as TRUE
-#' @param beta_a,beta_b shape parameters for beta_b
+#' @param beta_a,beta_b shape parameters the beta draws (this determines statistical power --- since these are the nodes with an actual treatment effect)
 #' @param p0_min numeric, the min for the root node's range (default=0).
 #'
 #' @return A data frame with columns:
@@ -200,8 +208,21 @@ draw_values_along_tree <- function(tree_df,
 #'
 #' @examples
 #' set.seed(123)
-#' df <- generate_tree_data(k = 2, L = 3, prop_tau_nonzero = 0.4)
+#' df <- generate_tree_data_bfs(k = 2, L = 3, prop_tau_nonzero = 0.4)
 #' df
+#' ## Here, half of the leaves have non-zero treatment effects and the test is very
+#' ## powerful (power about .75 in general)
+#' set.seed(123)
+#' thepower <- mean(beta_b_with_min(1000, beta_a = .1, beta_b = 1) <= .05)
+#' thepower
+#' df_bfs_half_true <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.1, beta_b = 1, p0_min = 0)
+#' df_bfs_half_true %>% arrange(node_id)
+#' mean(df_bfs_half_true$p[df_bfs_half_true$has_false_hyp] <= .05)
+#' ## A situation where no leaves have true effects. All draws should be from uniform.
+#' df_bfs_all_null <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.1, beta_b = 1, p0_min = 0)
+#' df_bfs_all_null %>% arrange(node_id)
+#' ## Here, there are no false positives
+#' mean(df_bfs_all_null$p[!df_bfs_all_null$has_false_hyp] < .05)
 generate_tree_data_bfs <- function(k, L, prop_tau_nonzero = 0.3,
                                    beta_a = 0.1, beta_b = 1,
                                    p0_min = 0) {
@@ -209,18 +230,9 @@ generate_tree_data_bfs <- function(k, L, prop_tau_nonzero = 0.3,
   tree_df <- assign_false_H_with_labels(k, L, prop_tau_nonzero)
 
   # Step 3 & 4: draw random values
-  out <- draw_values_along_tree(tree_df, k, beta_a, beta_b, p0_min)
+  out <- draw_values_along_tree_bfs(tree_df, k, beta_a, beta_b, p0_min)
   return(out)
 }
-
-## Example:
-set.seed(101)
-## Here, half of the leaves have non-zero treatment effects and the test is very powerful (beta_b(.1,1)) -- only about 25% of draws over .05 (i.e. 75% power)
-df_bfs_half_true <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.1, beta_b = 1, p0_min = 0)
-df_bfs_half_true %>% arrange(node_id)
-## A situation where no leaves have true effects. All draws should be from uniform.
-df_bfs_all_null <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.1, beta_b = 1, p0_min = 0)
-df_bfs_all_null %>% arrange(node_id)
 
 test_that("generate_tree_data produces correct shape of output", {
   set.seed(123)
@@ -263,6 +275,9 @@ test_that("generate_tree_data produces correct shape of output", {
   }
 })
 
+
+
+##### We did performance testing of the Depth First Search (DFS) approach and in our cases BFS nearly always was best.
 ##### Now, for performance, try using the Depth First Search (dfs) algorithm
 
 
@@ -489,144 +504,7 @@ test_that("dfs-based tree generation works for a small example", {
   }
 })
 
-
-## Example:
-## If node is TRUE, this means draw from beta_b (i.e. true treatment effect)
-set.seed(101)
-df_dfs_half_true <- generate_tree_data_dfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.2, beta_b = 1, p0_min = 0)
-df_dfs_half_true %>% arrange(node_id)
-set.seed(101)
-df_dfs_all_null <- generate_tree_data_dfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.2, beta_b = 1, p0_min = 0)
-df_dfs_all_null %>% arrange(node_id)
-
-### Compare to the BFS version:
-set.seed(101)
-df_bfs_half_true <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0.5, beta_a = 0.2, beta_b = 1, p0_min = 0)
-df_bfs_half_true %>% arrange(node_id)
-set.seed(101)
-df_bfs_all_null <- generate_tree_data_bfs(k = 4, L = 3, prop_tau_nonzero = 0, beta_a = 0.2, beta_b = 1, p0_min = 0)
-df_bfs_all_null %>% arrange(node_id)
-
-## The two approaches to setting up the tree are the same.
-stopifnot(nrow(df_bfs_half_true) == nrow(df_dfs_half_true))
-stopifnot(nrow(df_bfs_all_null) == nrow(df_dfs_all_null))
-stopifnot(df_bfs_half_true$label == df_dfs_half_true$label)
-stopifnot(df_bfs_all_null$label == df_dfs_all_null$label)
-stopifnot(df_bfs_half_true$has_false_hyp == df_dfs_half_true$has_false_hyp)
-stopifnot(df_bfs_all_null$has_false_hyp == df_dfs_all_null$has_false_hyp)
-
-## The two approaches yield different results in regards the p-values because they draw in different orders.
-## the p_0 is the same and p_1 is the same
-df_all_null <- full_join(df_bfs_all_null, df_dfs_all_null, by = c("label"), suffix = c("_bfs", "_dfs"))
-df_all_null %>% dplyr::select(node_id_bfs, label, has_false_hyp_bfs, p_bfs, p_dfs)
-
-df_half_true <- full_join(df_bfs_half_true, df_dfs_half_true, by = c("label"), suffix = c("_bfs", "_dfs"))
-df_half_true %>% dplyr::select(node_id_bfs, label, has_false_hyp_bfs, p_bfs, p_dfs)
-
-## for example, p=.03141 for lv_2 (2nd node of level 2 --- the first level
-## under the root using bfs) and for lv_1_1 (the first node of the second level
-## under the root, level 3). I don't have reason to believe that either is more
-## or less valid at this point. Try them out in simulations.
-
-bfs_test <- function(k, L, prop_tau_nonzero, beta_a, beta_b) {
-  res <- generate_tree_data_bfs(k = k, L = L, prop_tau_nonzero = prop_tau_nonzero, beta_a = beta_a, beta_b = beta_b, p0_min = 0)
-  any(res$p[!res$has_false_hyp] <= .05)
-}
-
-dfs_test <- function(k, L, prop_tau_nonzero, beta_a, beta_b) {
-  res <- generate_tree_data_dfs(k = k, L = L, prop_tau_nonzero = prop_tau_nonzero, beta_a = beta_a, beta_b = beta_b, p0_min = 0)
-  any(res$p[!res$has_false_hyp] <= .05)
-}
-
-## So, BFS versus DFS doesn't matter when all are null.
-set.seed(12345)
-fpr_bfs <- replicate(1000, bfs_test(k = 3, L = 4, prop_tau_nonzero = 0, beta_a = .2, beta_b = 1))
-mean(fpr_bfs)
-fpr_dfs <- replicate(1000, dfs_test(k = 3, L = 4, prop_tau_nonzero = 0, beta_a = .2, beta_b = 1))
-mean(fpr_dfs)
-
-## Also looks correct when we have a mix of true and false nulls
-set.seed(12345)
-fpr_bfs_some_null <- replicate(1000, bfs_test(k = 3, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_bfs_some_null)
-fpr_dfs_some_null <- replicate(1000, dfs_test(k = 3, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_dfs_some_null)
-
-## Also the return the same kind of results when we have many more nodes per level. (i.e. we have a control problem)
-set.seed(12345)
-
-# (k^L - 1) / (k - 1)
-(10^2 - 1) / (10 - 1)
-fpr_bfs_some_null_k10_l2 <- replicate(1000, bfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_bfs_some_null_k10_l2)
-fpr_dfs_some_null_k10_l2 <- replicate(1000, dfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_dfs_some_null_k10_l2)
-
-# (k^L - 1) / (k - 1)
-(100^2 - 1) / (100 - 1)
-fpr_bfs_some_null_k100_l2 <- replicate(1000, bfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_bfs_some_null_k100_l2)
-fpr_dfs_some_null_k100_l2 <- replicate(1000, dfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_dfs_some_null_k100_l2)
-
-(2^10 - 1) / (2 - 1)
-fpr_bfs_some_null_k2_l10 <- replicate(1000, bfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_bfs_some_null_k2_l10)
-fpr_dfs_some_null_k2_l10 <- replicate(1000, dfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-mean(fpr_dfs_some_null_k2_l10)
-
-
-
-sim_parms <- expand.grid(
-  k = sort(unique(c(seq(2, 20), 100))),
-  l = sort(unique(c(seq(2, 20), 100)))
-)
-sim_parms$total_nodes <- with(sim_parms, (k^l - 1) / (k <- 1))
-sim_parms <- sim_parms %>% filter(total_nodes < 1e+6)
-
-library(parallel)
-res <- mclapply(1:nrow(sim_parms), function(i) {
-  parms <- sim_parms[i, ]
-  message(parms)
-  res <- replicate(1000, bfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-  return(c(parms, mean(res)))
-}, mc.cores = 10)
-save(res, file = "res_weak.rda")
-res_dts <- lapply(res, function(lst) {
-  tmp <- as.data.frame(lst)
-  names(tmp)[4] <- "FWER"
-  return(tmp)
-})
-res_dt <- bind_rows(res_dts, .id = "sim_id")
-
-## Start here: I think that BFS is better until l > 10  for small k.
-library(microbenchmark)
-
-(10^4 - 1) / (10 - 1)
-(4^10 - 1) / (4 - 1)
-
-benches <- microbenchmark(
-  bfs_k10_l2 = bfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k10_l2 = dfs_test(k = 10, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k2_l10 = bfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k2_l10 = dfs_test(k = 2, L = 10, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k4_l4 = bfs_test(k = 4, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k4_l4 = dfs_test(k = 4, L = 4, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k4_l6 = bfs_test(k = 4, L = 6, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k4_l6 = dfs_test(k = 4, L = 6, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k100_l2 = bfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k100_l2 = dfs_test(k = 100, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k20_l2 = bfs_test(k = 20, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k20_l2 = dfs_test(k = 20, L = 2, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  bfs_k2_l15 = bfs_test(k = 2, L = 15, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  dfs_k2_l15 = dfs_test(k = 2, L = 15, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1),
-  times = 10L
-)
-benches
-
-
 ##### Reporting and Ploting Functions
-
 
 #' Plot a k-ary tree (from assign_false_H_with_labels) using ggraph.
 #'
@@ -706,7 +584,7 @@ plot_kary_tree <- function(df, nodes_per_level, layout = "tree", flip_tree = FAL
 }
 
 
-p_bfs <- plot_kary_tree(df_bfs, nodes_per_level = 4)
-print(p_bfs)
-p_dfs <- plot_kary_tree(df_dfs, nodes_per_level = 4)
-print(p_dfs)
+## p_bfs <- plot_kary_tree(df_bfs, nodes_per_level = 4)
+## print(p_bfs)
+## p_dfs <- plot_kary_tree(df_dfs, nodes_per_level = 4)
+## print(p_dfs)
