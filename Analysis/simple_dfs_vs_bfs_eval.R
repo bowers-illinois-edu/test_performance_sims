@@ -117,29 +117,49 @@ data_path <- file.path(here(), "CSVS")
 nsims <- 1000
 library(parallel)
 ncores <- future::availableCores()
+
 res <- mclapply(1:nrow(sim_parms), function(i) {
   parms <- sim_parms[i, ]
   message(paste(parms[1, ], collapse = " "))
-  ptm_bfs <- proc.time()
-  res_bfs <- replicate(nsims, bfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
-  etm_bfs <- proc.time() - ptm_bfs
+  ## ptm_bfs <- proc.time()
+  ## res_bfs <- replicate(nsims, bfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+  ## etm_bfs <- proc.time() - ptm_bfs
   ptm_dfs <- proc.time()
   res_dfs <- replicate(nsims, dfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
   etm_dfs <- proc.time() - ptm_dfs
-  fpr_bfs <- mean(res_bfs)
+  ## fpr_bfs <- mean(res_bfs)
   fpr_dfs <- mean(res_dfs)
-  parms$fpr_bfs <- fpr_bfs
+  ## parms$fpr_bfs <- fpr_bfs
   parms$fpr_dfs <- fpr_dfs
-  parms$time_bfs <- etm_bfs["elapsed"]
+  ## parms$time_bfs <- etm_bfs["elapsed"]
   parms$time_dfs <- etm_dfs["elapsed"]
   parms$sims <- nsims
   filename <- paste(data_path, "/sim_", paste(parms[1, 1:3], collapse = "_"), ".csv", collapse = "", sep = "")
   ## Since these simulations take a long time. Save them to disc as we go.
   data.table::fwrite(parms, file = filename)
+  return(parms)
 }, mc.cores = ncores - 1, mc.set.seed = TRUE)
 
 save(res, file = "res_weak.rda")
 
+## Assuming that we are using the CSVs
+load(here("Analysis","simple_sims_results.rda"),verbose=TRUE)
+
+head(simp_simsres)
+summary(simp_simsres$sims)
+
+## with(simp_simsres,table(time_bfs>time_dfs))
+
+simp_simsres$k_vs_l <- with(simp_simsres,k/l)
+##simp_simsres$bfs_vs_dfs <- with(simp_simsres,time_bfs - time_dfs)
+
+## simp_simsres %>% select(-file) %>% arrange(k_vs_l)
+## simp_simsres %>% filter(abs(bfs_vs_dfs) > 1) %>% select(-file) %>% arrange(k_vs_l)
+## simp_simsres %>% select(-file) %>% arrange(total_nodes,l,k)
+## ## It seems like dfs is faster when the number of nodes is large.
+
+## Roughly how long might it take for 1000 sims using dfs?
+sum(simp_simsres$time_dfs * 100)/60
 
 res_dts <- lapply(res, function(lst) {
   tmp <- as.data.frame(lst)
