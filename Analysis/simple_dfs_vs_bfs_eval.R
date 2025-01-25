@@ -105,13 +105,20 @@ system.time(
 mean(fpr_dfs_some_null_k2_l10)
 stopifnot(abs(mean(fpr_bfs_some_null_k2_l10) - mean(fpr_dfs_some_null_k2_l10)) < sim_se)
 
+## We want a fairly powerful test --- that rejects the null of no effects
+## frequently when it is false.
+
+mean(rbeta(1000, .1, 1) <= .05)
+mean(rbeta(1000, .2, 1) <= .05)
+
 
 sim_parms <- expand.grid(
-  k = sort(unique(c(seq(2, 20, 2), 100))),
-  l = sort(unique(c(seq(2, 16, 2), 100)))
+  k = sort(unique(c(seq(2, 20, 1), 100))),
+  l = sort(unique(c(seq(2, 20, 2), 100))),
+  prop_tau_nonzero = c(0, .1, .5, .9, 1)
 )
 sim_parms$total_nodes <- with(sim_parms, (k^l - 1) / (k <- 1))
-sim_parms <- sim_parms %>% filter(total_nodes < 1e+6)
+sim_parms <- sim_parms %>% filter(total_nodes < 5e+6)
 
 data_path <- file.path(here(), "CSVS")
 nsims <- 1000
@@ -125,7 +132,7 @@ res <- mclapply(1:nrow(sim_parms), function(i) {
   ## res_bfs <- replicate(nsims, bfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
   ## etm_bfs <- proc.time() - ptm_bfs
   ptm_dfs <- proc.time()
-  res_dfs <- replicate(nsims, dfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = .5, beta_a = .2, beta_b = 1))
+  res_dfs <- replicate(nsims, dfs_test(k = parms$k, L = parms$l, prop_tau_nonzero = parms$prop_tau_nonzero, beta_a = .1, beta_b = 1))
   etm_dfs <- proc.time() - ptm_dfs
   ## fpr_bfs <- mean(res_bfs)
   fpr_dfs <- mean(res_dfs)
@@ -143,15 +150,15 @@ res <- mclapply(1:nrow(sim_parms), function(i) {
 save(res, file = "res_weak.rda")
 
 ## Assuming that we are using the CSVs
-load(here("Analysis","simple_sims_results.rda"),verbose=TRUE)
+load(here("Analysis", "simple_sims_results.rda"), verbose = TRUE)
 
 head(simp_simsres)
 summary(simp_simsres$sims)
 
 ## with(simp_simsres,table(time_bfs>time_dfs))
 
-simp_simsres$k_vs_l <- with(simp_simsres,k/l)
-##simp_simsres$bfs_vs_dfs <- with(simp_simsres,time_bfs - time_dfs)
+simp_simsres$k_vs_l <- with(simp_simsres, k / l)
+## simp_simsres$bfs_vs_dfs <- with(simp_simsres,time_bfs - time_dfs)
 
 ## simp_simsres %>% select(-file) %>% arrange(k_vs_l)
 ## simp_simsres %>% filter(abs(bfs_vs_dfs) > 1) %>% select(-file) %>% arrange(k_vs_l)
@@ -159,7 +166,7 @@ simp_simsres$k_vs_l <- with(simp_simsres,k/l)
 ## ## It seems like dfs is faster when the number of nodes is large.
 
 ## Roughly how long might it take for 1000 sims using dfs?
-sum(simp_simsres$time_dfs * 100)/60
+sum(simp_simsres$time_dfs * 100) / 60
 
 res_dts <- lapply(res, function(lst) {
   tmp <- as.data.frame(lst)
