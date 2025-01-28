@@ -119,6 +119,7 @@ sim_parms <- expand.grid(
 )
 sim_parms$total_nodes <- with(sim_parms, (k^l - 1) / (k <- 1))
 sim_parms <- sim_parms %>% filter(total_nodes < 5e+6)
+str(sim_parms)
 
 data_path <- file.path(here(), "CSVS")
 nsims <- 1000
@@ -147,9 +148,9 @@ res <- mclapply(1:nrow(sim_parms), function(i) {
   return(parms)
 }, mc.cores = ncores - 1, mc.set.seed = TRUE)
 
-save(res, file = "res_weak.rda")
+save(res, file = "simple_res_unadj_results.rda")
 
-## Assuming that we are using the CSVs
+## Assuming that we are using the CSVs and thus ran simple_concat.py and simple_make_rda.R
 load(here("Analysis", "simple_sims_results.rda"), verbose = TRUE)
 
 head(simp_simsres)
