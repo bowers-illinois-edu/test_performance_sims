@@ -77,6 +77,37 @@ Data/block_datasets.done: Data/make_block_datasets.R \
 Data/unequal_blocksize_data.rda: Data/block_datasets.done
 Data/equal_blocksize_data.rda: Data/block_datasets.done
 
+#################### The simple analysis approach
+
+## This next shows a dependency but really it takes so long to run that we use the CSVS below.
+## We need to figure out how to represent this process: run the sims.R files on
+## a cluster and generate many CSVS
+## then concatenate the CSVS into the merged_results.csv, convert the csv to
+## an rda file, and then use that file for graphs, tables, etc.
+
+Simple_Analysis/simple_raw_unadj_results.rda: Simple_Analysis/simple_unadj_sims.R \
+	Simple_Analysis/simple_p_draws_fns.R
+	R --file=Simple_Analysis/simple_unadj_sims.R
+
+## In theory this next should depend on the csv files themselves but there are thousands.
+## So, I just create a file called ready_to_merge.done by hand at the command line
+
+Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done:
+	touch Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done
+
+Simple_Analysis/simple_sims_unadj_merged_results.csv: Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done \
+	Simple_Analysis/simple_concat_clean_unadj.py
+	source .venv/bin/activate && python Simple_Analysis/simple_concat_clean_unadj.py
+
+Simple_Analysis/simple_sims_unadj_results.rda: Simple_Analysis/simple_sims_unadj_merged_results.csv
+	R --file=Simple_Analysis/simple_unadj_make_rda.R
+
+Simple_Analysis/simple_results_exploration.done : Simple_Analysis/simple_results_exploration.R \
+	Simple_Analysis/simple_sims_unadj_results.rda
+	R --file=Simple_Analysis/simple_results_exploration.R
+
+
+####################
 ## Visualize the Makefile
 makefile.plots: makefile.png makefile.pdf
 

@@ -2,6 +2,6 @@
 library(data.table)
 library(here)
 
-simp_simsres <- fread(here::here("Analysis", "simple_sims_merged_results.csv"))
+simp_simsres_unadj <- fread(here::here("Simple_Analysis", "simple_sims_unadj_merged_results.csv"))
 
-save(simp_simsres, file = here::here("Analysis", "simple_sims_results.rda"))
+save(simp_simsres_unadj, file = here::here("Simple_Analysis", "simple_sims_unadj_results.rda"))
