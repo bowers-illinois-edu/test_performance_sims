@@ -415,7 +415,7 @@ draw_values_along_tree_dfs <- function(tree_df,
       p[node] <- runif(1, min = parent_val, max = 1)
     }
 
-    # Now push children, if any
+    # Now push / identify children, if any
     child_start <- (node - 1) * k + 2
     child_end <- node * k + 1
 
@@ -588,3 +588,172 @@ plot_kary_tree <- function(df, nodes_per_level, layout = "tree", flip_tree = FAL
 ## print(p_bfs)
 ## p_dfs <- plot_kary_tree(df_dfs, nodes_per_level = 4)
 ## print(p_dfs)
+
+## Another function but this time using a local Simes correction:
+simulate_hier_simes_local <- function(nSim = 10000,
+                                      k = 2,
+                                      l = 3,
+                                      t = 0.5,
+                                      alpha = 0.05,
+                                      betaParams = c(0.1, 1)) {
+  ##
+  ## A. Level-by-level indexing
+  ##
+  # For depth d = 0..l, we have k^d nodes.
+  # The total number of nodes is sum_{d=0..l}(k^d).
+  levelSizes <- k^(0:l) # vector of length (l+1)
+  levelOffsets <- cumsum(c(0, levelSizes[1:l]))
+  # levelOffsets[d+1] = number of nodes up to (but not including) level d
+  nTot <- sum(levelSizes)
+
+  # Helper: convert (level d, localIndex j) => global index
+  index_global <- function(d, j) {
+    # j in [1..k^d]
+    levelOffsets[d + 1] + j
+  }
+
+  # Helper: for a node at level d, local index j => vector of child global indices
+  children_indices <- function(d, j) {
+    if (d == l) {
+      return(integer(0))
+    } # no children if it's a leaf level
+    startChild <- k * (j - 1) + 1
+    endChild <- k * (j - 1) + k
+    childLocals <- seq.int(startChild, endChild)
+    idx <- index_global(d + 1, childLocals)
+    return(idx)
+  }
+
+  ##
+  ## B. Simulation
+  ##
+  falseRej_count <- 0
+
+  for (rep in seq_len(nSim)) {
+    # B.1. Build alt/null assignment for all nodes
+    alt <- rep(FALSE, nTot) # alt[i] = is node i non-null?
+
+    # Leaf indices
+    leafStart <- index_global(l, 1)
+    leafEnd <- index_global(l, k^l)
+    leafInds <- seq(leafStart, leafEnd)
+
+    # Random leaf assignment: alt with prob t
+    alt[leafInds] <- (runif(length(leafInds)) < t)
+
+    # Propagate alt up: for each level from bottom to top
+    for (d in seq(l, 1, by = -1)) {
+      nNodes_d <- levelSizes[d + 1]
+      offset_d <- levelOffsets[d + 1]
+      for (j in seq_len(nNodes_d)) {
+        childGlobal <- offset_d + j
+        if (alt[childGlobal]) {
+          # mark parent alt
+          parentLocal <- ceiling(j / k)
+          parentGlobal <- levelOffsets[d] + parentLocal
+          alt[parentGlobal] <- TRUE
+        }
+      }
+    }
+
+    # B.2. Top-down testing + gating
+    pvals <- rep(NA_real_, nTot)
+    tested <- rep(FALSE, nTot)
+    falseReject <- FALSE
+
+    # Root (level 0) => always tested
+    # root's global index = index_global(0, 1) = 1
+    rootIdx <- 1
+    if (alt[rootIdx]) {
+      # alt => Beta(??) scaled to [0,1] (no parent)
+      raw0 <- rbeta(1, betaParams[1], betaParams[2])
+      pvals[rootIdx] <- raw0 # from [0,1]
+    } else {
+      # null => Uniform(0,1)
+      pvals[rootIdx] <- runif(1, min = 0, max = 1)
+    }
+    tested[rootIdx] <- TRUE
+
+    if (!alt[rootIdx] && pvals[rootIdx] <= alpha) {
+      falseReject <- TRUE
+    }
+
+    # Level-by-level approach
+    for (d in seq_len(l)) {
+      # We check each node at level d:
+      start_d <- index_global(d, 1)
+      end_d <- index_global(d, k^d)
+      nodeRange_d <- seq(start_d, end_d)
+
+      # Among these nodes, which ones were tested + pval <= alpha?
+      testedParents <- nodeRange_d[tested[nodeRange_d] & pvals[nodeRange_d] <= alpha]
+      if (!length(testedParents)) next
+
+      for (parentIdx in testedParents) {
+        # This parent's children
+        parentLevelLocal <- parentIdx - levelOffsets[d] # 1..k^d
+        childInds <- children_indices(d, parentLevelLocal)
+        if (!length(childInds)) next
+
+        # Generate child p-values
+        parent_p <- pvals[parentIdx]
+        childPvals <- numeric(k) # we have k children
+        for (iC in seq_len(k)) {
+          cIdx <- childInds[iC]
+          if (alt[cIdx]) {
+            # alt => Beta scaled to [parent_p, 1]
+            rawBeta <- rbeta(1, betaParams[1], betaParams[2])
+            childPvals[iC] <- parent_p + (1 - parent_p) * rawBeta
+          } else {
+            # null => Unif(parent_p, 1)
+            childPvals[iC] <- runif(1, min = parent_p, max = 1)
+          }
+        }
+
+        # Record them
+        pvals[childInds] <- childPvals
+        tested[childInds] <- TRUE
+
+        # Check false rejections among these children
+        nullMask <- (!alt[childInds])
+        if (any(nullMask & (childPvals <= alpha))) {
+          falseReject <- TRUE
+        }
+
+        # Now apply Simes across these k child p-values
+        # Sort them: p_(1) <= p_(2) <= ... <= p_(k)
+        sortChild <- sort(childPvals)
+        iSeq <- seq_len(k)
+        simesVals <- (k / iSeq) * sortChild
+        simesStat <- min(simesVals)
+
+        # If simesStat > alpha => do not proceed to grandchildren
+        if (simesStat > alpha) {
+          # to block grandchildren, we can "force" these children's p to be > alpha
+          # so that gating won't proceed deeper
+          pvals[childInds] <- alpha + 1e-8
+        }
+      }
+    }
+
+    if (falseReject) {
+      falseRej_count <- falseRej_count + 1
+    }
+  }
+
+  # Return FWER estimate
+  fwer <- falseRej_count / nSim
+  return(fwer)
+}
+
+
+### Example usage
+set.seed(123)
+fwer_est <- simulate_hier_simes_local(
+  nSim = 20000, # number of replicates
+  k = 3,
+  l = 4,
+  t = 0.5,
+  alpha = 0.05,
+  betaParams = c(0.1, 1) # alt distribution Beta(0.1,1), scaled
+)

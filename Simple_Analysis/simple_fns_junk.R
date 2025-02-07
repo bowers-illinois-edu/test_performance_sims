@@ -1,4 +1,3 @@
-
 # Function to generate Beta random variables with minimum 'themin' and maximum 'themax'
 beta_with_min <- function(n, alpha, beta, themin, themax) {
   # Generate standard Beta random variables

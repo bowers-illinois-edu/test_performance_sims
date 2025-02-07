@@ -1,4 +1,4 @@
-## Assess performance of the dfs versus the bfs approaches
+## Assess performance of splitting procedures with an adjustment at each node like the Simes global procedure.
 
 library(here)
 source(here("Analysis", "simple_p_draws_fns.R"))

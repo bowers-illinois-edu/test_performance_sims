@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# A file to concatenate the many csv files produced by siusims.R
+# A file to concatenate the many csv files produced by the simulation file.
+# Currently must be hand edited, no command line arguments yet
 
 import os
 import glob
@@ -10,8 +11,7 @@ from pathlib import Path
 from IPython.display import clear_output, Image, display
 
 current_path = Path().absolute()
-# csv_path = current_path / 'Analysis' / 'CSVS'
-csv_path = current_path /  'CSVS'
+csv_path = current_path / 'Simple_Analysis' / 'CSVS_unadj'
 
 all_files = glob.glob(os.path.join(csv_path, "sim_[0-9]*.csv"))
 ## from https://github.com/softhints/python/blob/master/notebooks/python/Files/How_to_merge_multiple_CSV_files_with_Python.ipynb
@@ -28,7 +28,7 @@ merged_df = pd.concat(all_df, ignore_index=True)
 # merged_df
 merged_df.describe()
 
-output_dir = current_path / 'Analysis'  # Combine path objects using /
-output_file = output_dir / 'simple_sims_merged_results.csv'
+output_dir = current_path / 'Simple_Analysis'  # Combine path objects using /
+output_file = output_dir / 'simple_sims_unadj_merged_results.csv'
 
 merged_df.to_csv(output_file)

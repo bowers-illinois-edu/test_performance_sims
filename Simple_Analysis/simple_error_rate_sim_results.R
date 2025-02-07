@@ -2,7 +2,7 @@ library(here)
 library(abind)
 library(tidyverse)
 
-load(here("test_l10_n2_bigsims.rda"), verbose = TRUE))
+load(here("test_l10_n2_bigsims.rda"), verbose = TRUE)
 
 
 get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
@@ -14,7 +14,7 @@ get_max_fpr <- function(parent_lv, child_lv, obj = test_l6_n2) {
   return(max(res$mean_fpr))
 }
 
-options(scipen=10)
+options(scipen = 10)
 set.seed(12345)
 num_levs <- 10
 str(test_l10_n2)
