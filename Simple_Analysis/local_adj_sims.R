@@ -28,7 +28,7 @@ res <- mclapply(1:nrow(sim_parms), function(i) {
   parms <- sim_parms[i, ]
   message(paste(parms[1, ], collapse = " "))
   ptm <- proc.time()
-  res <- simulate_many_runs(n_sim = nsims, k = parms$k, L = parms$l, t = parms$prop_tau_nonzero)
+  res <- simulate_many_runs(n_sim = nsims, k = parms$k, l = parms$l, t = parms$prop_tau_nonzero)
   etm <- proc.time() - ptm
   parms$fwer <- mean(res)
   parms$time <- etm["elapsed"]
