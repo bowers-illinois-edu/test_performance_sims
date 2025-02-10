@@ -3,3 +3,4 @@ Data/make_test_data.done
 Analysis/CSVS/*
 Simple_Analysis/CSVS_unadj/*
 Simple_Analysis/CSVS_adj/*
+.Rproj.user

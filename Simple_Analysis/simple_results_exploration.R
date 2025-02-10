@@ -5,6 +5,7 @@ library(tidyverse)
 library(viridis)
 
 load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
+load(here("Simple_Analysis", "simple_sims_adj_results.rda"), verbose = TRUE)
 
 ## we use alpha=.05 below
 ## and simulation error is this (assuming 1000 sims)
@@ -15,7 +16,7 @@ simp_simsres_unadj <- simp_simsres_unadj %>%
   droplevels()
 
 ## Filling the contours at the alpha levels but plus sim error (sim_se)
-g_fill <- ggplot(data = simp_simsres_unadj, aes(x = k, y = l, z = fpr_dfs)) +
+g_fill_unadj <- ggplot(data = simp_simsres_unadj, aes(x = k, y = l, z = fpr_dfs)) +
   # geom_contour_filled(breaks = c(0, .05, .1, .2, .3, .4, .5, 1)) +
   geom_contour_filled(breaks = c(0, .05 + sim_se, .1 + sim_se, .2, .3, .4, .5, 1)) +
   labs(
@@ -34,8 +35,30 @@ g_fill <- ggplot(data = simp_simsres_unadj, aes(x = k, y = l, z = fpr_dfs)) +
   ) +
   coord_cartesian(clip = "off")
 
-print(g_fill)
+print(g_fill_unadj)
 
+
+## Filling the contours at the alpha levels but plus sim error (sim_se)
+g_fill_adj <- ggplot(data = simp_simsres_adj, aes(x = k, y = l, z = fwer)) +
+  # geom_contour_filled(breaks = c(0, .05, .1, .2, .3, .4, .5, 1)) +
+  geom_contour_filled(breaks = c(0, .05 + sim_se, .1 + sim_se, .2, .3, .4, .5, 1)) +
+  labs(
+    x = "Number of nodes per level",
+    fill = "FWER"
+  ) +
+  facet_wrap(~prop_tau_nonzero) +
+  #  scale_fill_viridis(discrete = TRUE) +
+  scale_y_continuous(
+    name = "Number of Levels"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 16)
+  ) +
+  coord_cartesian(clip = "off")
+
+print(g_fill_adj)
 ## When there are no treatment effects (i.e. all hypotheses of no effects are
 ## true), then we control at all kinds of graphs (prop_tau_nonzero=0)
 
@@ -56,7 +79,7 @@ print(g_fill)
 ## This is also evident in the contour plots --- there is a kind of smooth
 ## function that we are seeing here with a kind of limit or boundary when k is very large.
 
-g_lines_nodes <- ggplot(
+g_lines_nodes_unadj <- ggplot(
   data = simp_simsres_unadj,
   aes(groups = l, color = factor(l), x = k, y = fpr_dfs)
 ) +
@@ -64,10 +87,20 @@ g_lines_nodes <- ggplot(
   geom_line() +
   geom_hline(yintercept = .05)
 
-g_lines_nodes
+g_lines_nodes_unadj
+
+g_lines_nodes_adj <- ggplot(
+  data = simp_simsres_adj,
+  aes(groups = l, color = factor(l), x = k, y = fwer)
+) +
+  facet_wrap(~prop_tau_nonzero) +
+  geom_line() +
+  geom_hline(yintercept = .05)
+
+g_lines_nodes_adj
 
 
-g_lines_levels <- ggplot(
+g_lines_levels_unadj <- ggplot(
   data = simp_simsres_unadj,
   aes(groups = k, color = factor(k), x = l, y = fpr_dfs)
 ) +
@@ -75,8 +108,18 @@ g_lines_levels <- ggplot(
   facet_wrap(~prop_tau_nonzero) +
   geom_hline(yintercept = .05)
 
-g_lines_levels
+g_lines_levels_unadj
 
+
+g_lines_levels_adj <- ggplot(
+  data = simp_simsres_adj,
+  aes(groups = k, color = factor(k), x = l, y = fwer)
+) +
+  geom_line() +
+  facet_wrap(~prop_tau_nonzero) +
+  geom_hline(yintercept = .05)
+
+g_lines_levels_adj
 
 ## with no possible false positives (prop_tau_nonzero==1) or all true null
 ## (prop_tau_nonzero=0) we have control at all levels
@@ -98,6 +141,11 @@ simp_simsres_unadj %>%
   select(-file) %>%
   arrange(fpr_dfs)
 
+simp_simsres_adj %>%
+  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1) %>%
+  select(-file) %>%
+  arrange(fwer)
+
 ## What is the function that is f(k,l,prop_tau_nonzero) -> fwer (i.e. fdr_dfs) here alpha=.05
 simp_simsres_unadj %>%
   # filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1 & k < 4 & l < 15) %>%
@@ -105,6 +153,17 @@ simp_simsres_unadj %>%
   select(-file) %>%
   select(k, l, prop_tau_nonzero, fpr_dfs) %>%
   arrange(prop_tau_nonzero, k, l, fpr_dfs)
+
+
+
+sims_compare <- left_join(simp_simsres_adj, simp_simsres_unadj,by=c("k","l","prop_tau_nonzero"))
+
+
+g_comp <- ggplot(data=sims_compare,aes(x=fpr_dfs,y=fwer)) +
+  geom_point() +
+  geom_abline(intercept=0,slope=1)
+
+g_comp
 
 
 system("touch Simple_Analysis/simple_results_exploration.done")
