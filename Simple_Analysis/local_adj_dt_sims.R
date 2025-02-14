@@ -44,10 +44,12 @@ ncores <- future::availableCores()
 # ## This is closer to the cap
 # mean(rbeta(10000, 1.64, 1) <= .05)
 
+##nsims <- 10
 res <- mclapply(seq_len(nrow(sim_parms)), function(i) {
+##res <- lapply(seq_len(nrow(sim_parms)), function(i) {
   set.seed(12345) ## same seed for each set of parms
   parms <- sim_parms[i, ]
-  message(paste(parms[1, ], collapse = " "))
+  message(paste(i,parms[1, ], collapse = " "))
   ptm <- proc.time()
   res <- simulate_many_runs_DT(
     n_sim = nsims, k = parms$k, max_level = parms$l, t = parms$prop_tau_nonzero,
@@ -64,6 +66,7 @@ res <- mclapply(seq_len(nrow(sim_parms)), function(i) {
   data.table::fwrite(parms, file = filename)
   message(paste(c(parms[1, 1:4], parms$time), collapse = " "))
   return(parms)
+#})
 }, mc.cores = ncores - 1, mc.set.seed = TRUE)
 
 save(res, file = here("Simple_Analysis", "simple_adj_results_dt.rda"))
