@@ -114,8 +114,20 @@ Simple_Analysis/simple_sims_adj_results.rda: Simple_Analysis/simple_sims_adj_mer
 	R --file=Simple_Analysis/simple_adj_make_rda.R
 
 
+Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done:
+	touch Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done
+
+Simple_Analysis/simple_sims_latest_merged_results.csv: Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done \
+	Simple_Analysis/concat_clean_latest.py
+	source .venv/bin/activate && python Simple_Analysis/concat_clean_latest.py
+
+Simple_Analysis/simple_sims_latest_results.rda: Simple_Analysis/simple_sims_latest_merged_results.csv
+	R --file=Simple_Analysis/simple_latest_make_rda.R
+
+## Look at the results of the simulations
 Simple_Analysis/simple_results_exploration.done : Simple_Analysis/simple_results_exploration.R \
-	Simple_Analysis/simple_sims_unadj_results.rda
+	Simple_Analysis/simple_sims_unadj_results.rda \
+	Simple_Analysis/simple_sims_latest_results.rda
 	R --file=Simple_Analysis/simple_results_exploration.R
 
 

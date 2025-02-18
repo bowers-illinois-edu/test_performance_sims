@@ -1,11 +1,13 @@
 ## Explore and interpret the results of the simulations. Here focusing on the version without adjustment at each node.
 
 library(here)
-library(tidyverse)
+library(dplyr)
+library(ggplot2)
 library(viridis)
 
 load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
 load(here("Simple_Analysis", "simple_sims_adj_results.rda"), verbose = TRUE)
+load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
 
 ## we use alpha=.05 below
 ## and simulation error is this (assuming 1000 sims)
@@ -121,6 +123,16 @@ g_lines_levels_adj <- ggplot(
 
 g_lines_levels_adj
 
+
+## Look at the latest
+
+### First, weak control
+
+simp_simsres_latest %>%
+  filter(prop_tau_nonzero == 0) %>%
+  group_by(adj_effN, local_adj_fn) %>%
+  reframe(summary(fwer))
+
 ## with no possible false positives (prop_tau_nonzero==1) or all true null
 ## (prop_tau_nonzero=0) we have control at all levels
 simp_simsres_unadj %>%
@@ -156,12 +168,13 @@ simp_simsres_unadj %>%
 
 
 
-sims_compare <- left_join(simp_simsres_adj, simp_simsres_unadj,by=c("k","l","prop_tau_nonzero"))
+sims_compare <- left_join(simp_simsres_latest, simp_simsres_unadj, by = c("k", "l", "prop_tau_nonzero"))
+# sims_compare1 <- left_join(simp_simsres_adj, simp_simsres_unadj, simple_sims_latest_results, by = c("k", "l", "prop_tau_nonzero"))
 
 
-g_comp <- ggplot(data=sims_compare,aes(x=fpr_dfs,y=fwer)) +
+g_comp <- ggplot(data = sims_compare, aes(x = fpr_dfs, y = fwer)) +
   geom_point() +
-  geom_abline(intercept=0,slope=1)
+  geom_abline(intercept = 0, slope = 1)
 
 g_comp
 

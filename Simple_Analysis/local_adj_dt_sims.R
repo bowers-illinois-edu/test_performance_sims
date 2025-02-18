@@ -44,29 +44,32 @@ ncores <- future::availableCores()
 # ## This is closer to the cap
 # mean(rbeta(10000, 1.64, 1) <= .05)
 
-##nsims <- 10
+## nsims <- 10
 res <- mclapply(seq_len(nrow(sim_parms)), function(i) {
-##res <- lapply(seq_len(nrow(sim_parms)), function(i) {
+  ## res <- lapply(seq_len(nrow(sim_parms)), function(i) {
   set.seed(12345) ## same seed for each set of parms
   parms <- sim_parms[i, ]
-  message(paste(i,parms[1, ], collapse = " "))
+  message(paste(i, parms[1, ], collapse = " "))
   ptm <- proc.time()
   res <- simulate_many_runs_DT(
     n_sim = nsims, k = parms$k, max_level = parms$l, t = parms$prop_tau_nonzero,
     alpha = .05, N_total = 10000000, beta_base = .1,
     adj_effN = parms$adj_effN,
-    local_adj_p_fn = getFromNamespace(parms[["local_adj_fn"]], ns = "TreeTestsSim")
+    local_adj_p_fn = getFromNamespace(parms[["local_adj_fn"]], ns = "TreeTestsSim"),
+    global_adj = "hommel",
+    return_details = FALSE
   )
   etm <- proc.time() - ptm
   parms$fwer <- mean(res)
   parms$time <- etm["elapsed"]
   parms$sims <- nsims
-  filename <- paste(data_path, "/sim_", paste(parms[1, 1:3], collapse = "_"), ".csv", collapse = "", sep = "")
+  parms[, names(res) := as.list(res)]
+  filename <- paste(data_path, "/sim_", paste(parms[1, 1:5], collapse = "_"), ".csv", collapse = "", sep = "")
   ## Since these simulations take a long time. Save them to disc as we go.
   data.table::fwrite(parms, file = filename)
-  message(paste(c(parms[1, 1:4], parms$time), collapse = " "))
+  message(paste(c(parms[1, 1:5], parms$time), collapse = " "))
   return(parms)
-#})
+  # })
 }, mc.cores = ncores - 1, mc.set.seed = TRUE)
 
-save(res, file = here("Simple_Analysis", "simple_adj_results_dt.rda"))
+save(res, file = here("Simple_Analysis", "simple_latest_results_dt.rda"))
