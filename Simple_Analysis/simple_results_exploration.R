@@ -2,20 +2,102 @@
 
 library(here)
 library(dplyr)
+library(dtplyr)
+library(data.table)
+library(conflicted)
 library(ggplot2)
 library(viridis)
+conflicts_prefer(dplyr::filter)
 
-load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
-load(here("Simple_Analysis", "simple_sims_adj_results.rda"), verbose = TRUE)
+# load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
+# load(here("Simple_Analysis", "simple_sims_adj_results.rda"), verbose = TRUE)
 load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
 
 ## we use alpha=.05 below
 ## and simulation error is this (assuming 1000 sims)
 sim_se <- 2 * sqrt(.05 * (1 - .05) / 1000)
 
-simp_simsres_unadj <- simp_simsres_unadj %>%
-  filter(!is.na(prop_tau_nonzero)) %>%
-  droplevels()
+## simp_simsres_unadj <- simp_simsres_unadj %>%
+##   filter(!is.na(prop_tau_nonzero)) %>%
+##   droplevels() %>% as.data.table()
+
+## using the dtplyr approach for readablilty for those not used to data.table syntax
+
+## Check on weak control: looks good. No serious departures from nominal
+## control when all H0 is true
+
+## Need to redo the sims to have proportion of true discoveries out of correct rejections
+## TODO: redo sims with calc of power.
+
+simp_simsres_latest %>%
+  filter(prop_tau_nonzero == 0) %>%
+  group_by(adj_effN, local_adj_fn) %>%
+  summarize(
+    mean_fwer0 = mean(fwer),
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bot_up_fwer = mean(bottom_up_false_error),
+    max_bot_up_fwer = max(bottom_up_false_error),
+    mean_num_true_disc = mean(true_discoveries),
+    min_bot_up_true_disc = min(bottom_up_true_discoveries),
+    med_bot_up_true_disc = median(bottom_up_true_discoveries),
+    mean_bot_up_true_disc = mean(bottom_up_true_discoveries),
+    max_bot_up_true_disc = max(bottom_up_true_discoveries)
+  )
+
+simp_simsres_latest %>%
+  filter(prop_tau_nonzero == 1) %>%
+  group_by(adj_effN, local_adj_fn) %>%
+  summarize(
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bot_up_fwer = mean(bottom_up_false_error),
+    max_bot_up_fwer = max(bottom_up_false_error),
+    min_num_true_disc = min(true_discoveries),
+    med_num_true_disc = median(true_discoveries),
+    mean_num_true_disc = mean(true_discoveries),
+    max_num_true_disc = max(true_discoveries),
+    min_bot_up_true_disc = min(bottom_up_true_discoveries),
+    med_bot_up_true_disc = median(bottom_up_true_discoveries),
+    mean_bot_up_true_disc = mean(bottom_up_true_discoveries),
+    max_bot_up_true_disc = max(bottom_up_true_discoveries)
+  )
+
+## Now what about strong control? Without both simulating the idea of splitting
+## (adj_effN=TRUE) and local adjustment, we do not have strong control. And, in
+## fact, we need direct p-value adjustment (local_hommel_all_ps) rather than
+## the Simes local/global test.
+
+simp_simsres_latest %>%
+  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1) %>%
+  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  summarize(
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bottom_up_fwer = mean(bottom_up_false_error),
+    max_bottom_up_fwer = max(bottom_up_false_error)
+  )
+
+## So, our winner is adj_effN=TRUE and local_hommel_all_ps  and we should
+## compare this against the bottom up hommel in terms of power.
+
+strong_ctrl_res <- simp_simsres_latest %>%
+  filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps" &
+    (prop_tau_nonzero > 0 & prop_tau_nonzero < 1)) %>%
+  select(k, l, prop_tau_nonzero, false_error, true_discoveries, bottom_up_false_error, bottom_up_true_discoveries)
+
+plot_dat <- rbind(strong_ctrl_res, strong_ctrl_res)
+plot_dat <- plot_dat %>% mutate(top_down = rep(c(1, 0), each = nrow(strong_ctrl_res)))
+plot_dat <- plot_dat %>% mutate(
+  fwer = ifelse(top_down == 1, false_error, bottom_up_false_error),
+  num_disc = ifelse(top_down == 1, true_discoveries, bottom_up_true_discoveries)
+)
+
+g_tmp <- ggplot(data = plot_dat, aes(x = k, y = num_disc, groups = factor(l), color = factor(l))) +
+  geom_line() +
+  facet_wrap(~ prop_tau_nonzero + top_down)
+
+print(g_tmp)
 
 ## Filling the contours at the alpha levels but plus sim error (sim_se)
 g_fill_unadj <- ggplot(data = simp_simsres_unadj, aes(x = k, y = l, z = fpr_dfs)) +
@@ -166,17 +248,6 @@ simp_simsres_unadj %>%
   select(k, l, prop_tau_nonzero, fpr_dfs) %>%
   arrange(prop_tau_nonzero, k, l, fpr_dfs)
 
-
-
-sims_compare <- left_join(simp_simsres_latest, simp_simsres_unadj, by = c("k", "l", "prop_tau_nonzero"))
-# sims_compare1 <- left_join(simp_simsres_adj, simp_simsres_unadj, simple_sims_latest_results, by = c("k", "l", "prop_tau_nonzero"))
-
-
-g_comp <- ggplot(data = sims_compare, aes(x = fpr_dfs, y = fwer)) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1)
-
-g_comp
 
 
 system("touch Simple_Analysis/simple_results_exploration.done")
