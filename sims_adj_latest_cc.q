@@ -1,17 +1,17 @@
 #!/bin/bash
 
 #SBATCH --job-name=sims_adj_latest_dt
-#SBATCH --ntasks-per-node=48
+#SBATCH --ntasks-per-node=100
 #SBATCH --nodes=1
-#SBATCH --time=48:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=END
 #SBATCH --mail-user=jwbowers@illinois.edu
 #SBATCH --export=PATH,R_LIBS,CLUSTER,CORES,LD_LIBRARY_PATH
 #SBATCH --partition=IllinoisComputes
 #
-module load gnu/gnu-9.3.0 gnu/openmpi-3.1.6-gnu-9.3.0
-source ~/miniforge3/bin/activate
+#module load gnu/gnu-9.3.0 gnu/openmpi-3.1.6-gnu-9.3.0
+#source ~/miniforge3/bin/activate
 conda activate mambaR
 
 ## set InputDir=/data/keeling/a/jwbowers/Documents/PROJECTS/manytests-paper
