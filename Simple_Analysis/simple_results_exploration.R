@@ -1,4 +1,5 @@
-## Explore and interpret the results of the simulations. Here focusing on the version without adjustment at each node.
+## Explore and interpret the results of the simulations. Here focusing on the
+## version without adjustment at each node.
 
 library(here)
 library(dplyr)
@@ -16,6 +17,8 @@ load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
 ## we use alpha=.05 below
 ## and simulation error is this (assuming 1000 sims)
 sim_se <- 2 * sqrt(.05 * (1 - .05) / 1000)
+## We want to be less that this number:
+.05 + sim_se
 
 ## simp_simsres_unadj <- simp_simsres_unadj %>%
 ##   filter(!is.na(prop_tau_nonzero)) %>%
@@ -26,42 +29,55 @@ sim_se <- 2 * sqrt(.05 * (1 - .05) / 1000)
 ## Check on weak control: looks good. No serious departures from nominal
 ## control when all H0 is true
 
-## Need to redo the sims to have proportion of true discoveries out of correct rejections
-## TODO: redo sims with calc of power.
 
-simp_simsres_latest %>%
-  filter(prop_tau_nonzero == 0) %>%
-  group_by(adj_effN, local_adj_fn) %>%
-  summarize(
-    mean_fwer0 = mean(fwer),
-    mean_fwer = mean(false_error),
-    max_fwer = max(false_error),
-    mean_bot_up_fwer = mean(bottom_up_false_error),
-    max_bot_up_fwer = max(bottom_up_false_error),
-    mean_num_true_disc = mean(true_discoveries),
-    min_bot_up_true_disc = min(bottom_up_true_discoveries),
-    med_bot_up_true_disc = median(bottom_up_true_discoveries),
-    mean_bot_up_true_disc = mean(bottom_up_true_discoveries),
-    max_bot_up_true_disc = max(bottom_up_true_discoveries)
-  )
+key_char <- c("false_error", "power", "num_leaves_tested", "leaf_power", "num_nodes_tested")
 
-simp_simsres_latest %>%
-  filter(prop_tau_nonzero == 1) %>%
-  group_by(adj_effN, local_adj_fn) %>%
-  summarize(
-    mean_fwer = mean(false_error),
-    max_fwer = max(false_error),
-    mean_bot_up_fwer = mean(bottom_up_false_error),
-    max_bot_up_fwer = max(bottom_up_false_error),
-    min_num_true_disc = min(true_discoveries),
-    med_num_true_disc = median(true_discoveries),
-    mean_num_true_disc = mean(true_discoveries),
-    max_num_true_disc = max(true_discoveries),
-    min_bot_up_true_disc = min(bottom_up_true_discoveries),
-    med_bot_up_true_disc = median(bottom_up_true_discoveries),
-    mean_bot_up_true_disc = mean(bottom_up_true_discoveries),
-    max_bot_up_true_disc = max(bottom_up_true_discoveries)
-  )
+summary_fn <- function(x) {
+  if (all(is.na(x))) {
+    return(data.table(summary_stat = c("min", "median", "max"), value = c(NA, NA, NA)))
+  } else {
+    return(data.table(
+      summary_stat = c("min", "median", "max"),
+      value = quantile(x, c(0, 0.5, 1), na.rm = TRUE)
+    ))
+  }
+}
+
+res_all_true <- simp_simsres_latest[prop_tau_nonzero == 0,
+  {
+    res_list <- lapply(key_char, function(nm) {
+      res0 <- summary_fn(get(nm))
+      res0[, variable := nm]
+      return(res0)
+    })
+    rbindlist(res_list)
+  },
+  by = c("adj_effN", "local_adj_fn")
+]
+
+## We have weak control
+res_all_true %>% filter(variable %in% c("false_error"))
+
+## When all hyps are false then of course no false errors.
+
+vars2 <- c("power", "leaf_power", "num_leaves_tested", "num_leaves", "bottom_up_power")
+res_all_false <- simp_simsres_latest[prop_tau_nonzero == 1,
+  {
+    res_list <- lapply(vars2, function(nm) {
+      res0 <- summary_fn(get(nm))
+      res0[, variable := nm]
+      return(res0)
+    })
+    rbindlist(res_list)
+  },
+  by = c("adj_effN", "local_adj_fn")
+]
+
+res_all_false
+
+## So, the top down approach tests fewer leaves but tends to nearly always
+## reject the false leaves compared to the bottom up approach which fails to
+## reject a lot (comparing leaf_power to bottom_up_power here)
 
 ## Now what about strong control? Without both simulating the idea of splitting
 ## (adj_effN=TRUE) and local adjustment, we do not have strong control. And, in
@@ -81,16 +97,72 @@ simp_simsres_latest %>%
 ## So, our winner is adj_effN=TRUE and local_hommel_all_ps  and we should
 ## compare this against the bottom up hommel in terms of power.
 
+simp_simsres_latest %>%
+  filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps") %>%
+  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  summarize(
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bottom_up_fwer = mean(bottom_up_false_error),
+    max_bottom_up_fwer = max(bottom_up_false_error)
+  )
+
+simp_simsres_latest %>%
+  filter(prop_tau_nonzero > 0 & adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps") %>%
+  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  summarize(
+    min_power = min(power, na.rm = TRUE),
+    med_power = median(power, na.rm = TRUE),
+    max_power = max(power, na.rm = TRUE),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    med_leaf_power = median(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    min_bot_up_power = min(bottom_up_power, na.rm = TRUE),
+    med_bot_up_power = median(bottom_up_power, na.rm = TRUE),
+    max_bot_up_power = max(bottom_up_power, na.rm = TRUE)
+  )
+
+
+## Make a data set of this:
+
 strong_ctrl_res <- simp_simsres_latest %>%
   filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps" &
     (prop_tau_nonzero > 0 & prop_tau_nonzero < 1)) %>%
-  select(k, l, prop_tau_nonzero, false_error, true_discoveries, bottom_up_false_error, bottom_up_true_discoveries)
+  as_tibble()
+
+## Here we didn't get to test any leaves. The bottom up approach does 1024 tests with very low power
+## But the top down approach stops early --- it tells us **correctly** that at least one of the leaves of a rejected parent is nonnull
+## but it also says that we cannot detect the specific leaf
+##
+with(strong_ctrl_res, table(k, l))
+## When it does test a nonnull leaf, it always rejects
+summary(strong_ctrl_res$num_leaves_tested)
+summary(strong_ctrl_res$leaf_power)
+table(strong_ctrl_res$leaf_power, exclude = c())
+
+## Often stops after just a few nodes: (these are means, TODO record more than mean, like max and mid and median)
+## rarely (on average) tests leaves
+summary(strong_ctrl_res$num_nodes_tested)
+
+strong_ctrl_res %>%
+  filter(k == 6, l == 8) %>%
+  select(prop_tau_nonzero, false_error, power, num_nodes_tested, leaf_power, num_leaves, num_leaves_tested, bottom_up_false_error, bottom_up_power)
+
+strong_ctrl_res %>%
+  filter(k == 8, l == 6) %>%
+  select(prop_tau_nonzero, false_error, power, num_nodes_tested, leaf_power, num_leaves, num_leaves_tested, bottom_up_false_error, bottom_up_power)
+
+strong_ctrl_res %>%
+  filter(num_leaves_tested > 0) %>%
+  select(k, l, prop_tau_nonzero, false_error, power, num_nodes_tested, leaf_power, num_leaves, num_leaves_tested, bottom_up_false_error, bottom_up_power) %>%
+  arrange(k, l, prop_tau_nonzero)
+
 
 plot_dat <- rbind(strong_ctrl_res, strong_ctrl_res)
 plot_dat <- plot_dat %>% mutate(top_down = rep(c(1, 0), each = nrow(strong_ctrl_res)))
 plot_dat <- plot_dat %>% mutate(
   fwer = ifelse(top_down == 1, false_error, bottom_up_false_error),
-  num_disc = ifelse(top_down == 1, true_discoveries, bottom_up_true_discoveries)
+  num_disc = ifelse(top_down == 1, power, bottom_up_power)
 )
 
 g_tmp <- ggplot(data = plot_dat, aes(x = k, y = num_disc, groups = factor(l), color = factor(l))) +
