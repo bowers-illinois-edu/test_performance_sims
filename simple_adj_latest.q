@@ -12,7 +12,7 @@
 #SBATCH --partition=jwbowers
 #
 module load gnu/gnu-9.3.0 gnu/openmpi-3.1.6-gnu-9.3.0
-source ~/miniforge3/bin/activate
+source ~/mambaforge/bin/activate
 conda activate mambaR
 
 ## set InputDir=/data/keeling/a/jwbowers/Documents/PROJECTS/manytests-paper

@@ -40,8 +40,8 @@ if (Sys.getenv("CORES") == "" & !exists("numcores")) {
   ncores <- future::availableCores()
   print(ncores)
 } else {
-  if (!exists("numcores")) {
-    numcores <- as.numeric(Sys.getenv("CORES")[[1]])
+  if (!exists("ncores")) {
+    ncores <- as.numeric(Sys.getenv("CORES")[[1]])
   }
 }
 
@@ -122,4 +122,4 @@ res <- mclapply(theidx, function(i) {
   # })
 }, mc.cores = ncores, mc.set.seed = TRUE)
 
-save(res, file = here("Simple_Analysis", "simple_latest_results_dt.rda"))
+save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", MACHINE, ".rda", collapse = "")))

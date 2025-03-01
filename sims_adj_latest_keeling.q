@@ -3,7 +3,7 @@
 #SBATCH --job-name=siusims_testperf
 #SBATCH --tasks-per-node=24
 #SBATCH --nodes=1
-#SBATCH --time=96:00:00
+#SBATCH --time=168:00:00
 #SBATCH --mem-per-cpu=8048
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=END
