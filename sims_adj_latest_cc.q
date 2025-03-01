@@ -9,6 +9,7 @@
 #SBATCH --mail-user=jwbowers@illinois.edu
 #SBATCH --export=PATH,R_LIBS,CLUSTER,CORES,LD_LIBRARY_PATH,MACHINE
 #SBATCH --partition=IllinoisComputes
+#SBATCH --account=jwbowers-ic
 #
 conda activate mambaR
 
