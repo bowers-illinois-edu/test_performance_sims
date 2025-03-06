@@ -78,12 +78,14 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 ## to keep this simple and one machine/node and use mclapply rather than
 ## future_apply or some job array via slurm
 
-machine_name <- Sys.getenv("MACHINE")
-if (machine_name == "CampusCluster") {
-  theidx <- theidx[1:floor(length(theidx) * .75)]
-}
-if (machine_name == "Keeling") {
-  theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
+if(length(theidx)==nrow(sim_parms)){
+  machine_name <- Sys.getenv("MACHINE")
+  if (machine_name == "CampusCluster") {
+    theidx <- theidx[1:floor(length(theidx) * .75)]
+  }
+  if (machine_name == "Keeling") {
+    theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
+  }
 }
 
 
@@ -120,6 +122,6 @@ res <- mclapply(theidx, function(i) {
   message(paste(c(parms[1, 1:6], parms$time), collapse = " "))
   return(parms)
   # })
-}, mc.cores = ncores, mc.set.seed = TRUE)
+}, mc.cores = ncores, mc.preschedule=FALSE,mc.set.seed = TRUE)
 
 save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", MACHINE, ".rda", collapse = "")))
