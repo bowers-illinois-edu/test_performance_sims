@@ -3,29 +3,28 @@
 #SBATCH --account=jwbowers-ic
 #SBATCH --partition=IllinoisComputes
 #SBATCH --nodes=1
-#SBATCH --ntasks=128
-#SBATCH --time=05:00:00
+#SBATCH --ntasks=32
+#SBATCH --time=00:10:00
 #SBATCH --mail-user=mvanmoer@illinois.edu
 #SBATCH --mail-type="BEGIN,END,FAIL"
 
 # print out actual node assigned
 hostname
 
-module load singularity/3.8.5
-
-# edit for where the repos are
-PROJ=/projects/illinois/las/pol/jwbowers
-MANYTESTSRDIR="$PROJ/manytestsr"
-TEST_PERF_SIMS_DIR="$PROJ/test_performance_sims"
+PROJDIR=/projects/illinois/las/pol/jwbowers/mvanmoer
 
 # edit for wherever the sif is.
-SIF="$PROJ/minimal.sif"
+SIF="$PROJDIR/containers/minimal.sif"
 
 # edit for wherever mclapply-test.sh is
-SCRIPT="$TEST_PERF_SIMS_DIR/jobfiles/mclapply-test.sh"
+SCRIPT="$PROJDIR/src/test_performance_sims/jobfiles/mclapply-test.sh"
 
-# exec to execute the script instead of launching a shell
-singularity exec \
+# edit for where the repos are
+MANYTESTSRDIR="$PROJDIR/src/manytestsr"
+TEST_PERF_SIMS_DIR="$PROJDIR/src/test_performance_sims"
+
+# exec to execute the script inside the container instead of launching a shell
+apptainer exec \
     --bind /projects \
     --bind $MANYTESTSRDIR:/mnt/manytestsr \
     --bind $TEST_PERF_SIMS_DIR:/mnt/test_performance_sims \
