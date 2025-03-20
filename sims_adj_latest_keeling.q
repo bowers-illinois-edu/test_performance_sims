@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=siusims_testperf
+#SBATCH --job-name=local_adj_dt_sims
 #SBATCH --tasks-per-node=24
 #SBATCH --nodes=1
 #SBATCH --time=168:00:00
@@ -30,7 +30,6 @@ echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 
 Rscript --verbose Simple_Analysis/local_adj_dt_sims.R
-
 
 echo "Finished on: $(date --rfc-3339=seconds)"
 
