@@ -125,10 +125,10 @@ Simple_Analysis/simple_sims_latest_results.rda: Simple_Analysis/simple_sims_late
 	R --file=Simple_Analysis/simple_latest_make_rda.R
 
 ## Look at the results of the simulations
-Simple_Analysis/simple_results_exploration.done : Simple_Analysis/simple_results_exploration.R \
+Simple_Analysis/results_exploration.done : Simple_Analysis/results_exploration.R \
 	Simple_Analysis/simple_sims_unadj_results.rda \
 	Simple_Analysis/simple_sims_latest_results.rda
-	R --file=Simple_Analysis/simple_results_exploration.R
+	R --file=Simple_Analysis/results_exploration.R
 
 
 ####################
