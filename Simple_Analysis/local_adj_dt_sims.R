@@ -122,8 +122,7 @@ res <- mclapply(theidx, function(i) {
     global_adj = "hommel",
     alpha_method = parms$alpha_fn,
     return_details = FALSE,
-    final_global_adj = x$final_adj_method,
-    alpha_method = x$alpha_method,
+    final_global_adj = parms$final_adj_method,
     multicore = FALSE
   )
   etm <- proc.time() - ptm
