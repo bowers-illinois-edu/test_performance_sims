@@ -9,6 +9,10 @@ library(dtplyr)
 library(parallel)
 library(TreeTestsSim)
 
+
+machine_name <- Sys.getenv("MACHINE")
+message(machine_name)
+
 alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
 final_adj_methods <- c("none", "fdr", "fwer")
 local_adj_methods <- c("local_hommel_all_ps", "local_unadj_all_ps")
@@ -134,4 +138,4 @@ res <- mclapply(theidx, function(i) {
   # })
 }, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)
 
-save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", MACHINE, ".rda", collapse = "")))
+save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", machine_name, ".rda", collapse = "")))
