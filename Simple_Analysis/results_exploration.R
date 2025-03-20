@@ -15,8 +15,8 @@ conflicts_prefer(dplyr::filter)
 load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
 
 ## we use alpha=.05 below
-## and simulation error is this (assuming 1000 sims)
-sim_se <- 2 * sqrt(.05 * (1 - .05) / 1000)
+## and simulation error is this
+sim_se <- 2 * sqrt(.05 * (1 - .05) / unique(simp_simsres_latest$sims))
 ## We want to be less that this number:
 .05 + sim_se
 
@@ -52,7 +52,7 @@ res_all_true <- simp_simsres_latest[prop_tau_nonzero == 0,
     })
     rbindlist(res_list)
   },
-  by = c("adj_effN", "local_adj_fn")
+  by = c("alpha_fn", "adj_effN", "local_adj_fn")
 ]
 
 ## We have weak control
@@ -60,7 +60,7 @@ res_all_true %>% filter(variable %in% c("false_error"))
 
 ## When all hyps are false then of course no false errors.
 
-vars2 <- c("power", "leaf_power", "num_leaves_tested", "num_leaves", "bottom_up_power")
+vars2 <- c("power", "leaf_power", "num_leaves_tested", "num_leaves", "bottom_up_power", "false_error")
 res_all_false <- simp_simsres_latest[prop_tau_nonzero == 1,
   {
     res_list <- lapply(vars2, function(nm) {
@@ -70,10 +70,18 @@ res_all_false <- simp_simsres_latest[prop_tau_nonzero == 1,
     })
     rbindlist(res_list)
   },
-  by = c("adj_effN", "local_adj_fn")
+  by = c("alpha_fn", "adj_effN", "local_adj_fn")
 ]
 
-res_all_false
+## No false errors possible given the simulation
+res_all_false %>%
+  filter(variable == "false_error") %>%
+  summary(mean(value))
+
+## Power differences (as well as number of tests --- number of leaves detected)
+
+res_all_false %>%
+  filter(variable == "power" & summary_stat == "median")
 
 ## So, the top down approach tests fewer leaves but tends to nearly always
 ## reject the false leaves compared to the bottom up approach which fails to
@@ -86,20 +94,21 @@ res_all_false
 
 simp_simsres_latest %>%
   filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1) %>%
-  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn) %>%
   summarize(
     mean_fwer = mean(false_error),
     max_fwer = max(false_error),
     mean_bottom_up_fwer = mean(bottom_up_false_error),
     max_bottom_up_fwer = max(bottom_up_false_error)
-  )
+  ) %>%
+  print(n = 100)
 
 ## So, our winner is adj_effN=TRUE and local_hommel_all_ps  and we should
 ## compare this against the bottom up hommel in terms of power.
 
 simp_simsres_latest %>%
   filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps") %>%
-  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn) %>%
   summarize(
     mean_fwer = mean(false_error),
     max_fwer = max(false_error),
