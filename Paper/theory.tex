@@ -40,9 +40,9 @@
 %\addbibresource{/Users/jwbowers/repos/Research-Group-Bibliography/big.bib}
 \addbibresource{../BIB/references.bib}
 
-\title{Why does this work?}
-%\providecommand{\subtitle}[1]{}
-%\subtitle{Draft. Do not circulate or cite without permission. Comments welcome.}
+\title{Why does the top-down tree-shaped hypothesis testing procedure control family wise error rates?}
+\providecommand{\subtitle}[1]{}
+\subtitle{Draft. Do not circulate or cite without permission. Comments welcome.}
 \author{Jake Bowers and David Kim}
 \date{\today}
 
@@ -113,6 +113,19 @@
 
 This section explains the theory behind the method.
 
+\section{Recap of the method and notation}
+
+Imagine that we have hypotheses ordered in an inverted tree-like structure as
+shown in Figure~\ref{fig:simp_alg}.  We use this ordering to impose a
+\textbf{stopping rule} and a \textbf{monotonicity rule}.\footnote{We combine
+the \autocite{goeman2010sequential}, \autocite{goeman2012inheritance}, and
+\autocite{rosenbaum2008a} ideas.} We show below that these rules allow weak
+control of the family wise error rate (FWER) of testing the multiple hypotheses
+represented in the tree --- control of the FWER when all of the hypotheses in
+the tree are true. Then we show that these rules are not sufficient for strong
+control of the FWER and add two rules which allow such control.
+
+
 
 \begin{figure}[h]
 \centering
@@ -144,7 +157,7 @@ This section explains the theory behind the method.
 
   \caption{The structured approach with fixed false positive rate $\alpha$. All
     blocks are in set $\bset_0$. All other hypotheses are subsets of those
-    higher on the path and disjoint from other not on the same path. For
+    higher on the path and disjoint from others not on the same path. For
     example, $\bset_1 \subset \bset_0$ and $\bset_1 \cap \bset_2=\emptyset$.
     The $p$-value, $p_0$, is the result from a test of the hypothesis of no
     effects using all the blocks, $p_1$ is the $p$-value from a test using only
@@ -153,22 +166,10 @@ This section explains the theory behind the method.
   1.}\label{fig:simp_alg}
 
 \end{figure}
-
 %https://q.uiver.app/#q=WzAsMTMsWzIsMCwiSF97XFxic2V0X3swfX0iXSxbMSwyLCJIX3tCX3sxfX0iXSxbMywyLCJIX3tCX3syfX0iXSxbMCw0LCJIX3tCX3sxMX19Il0sWzEsNCwiSF97Ql97MTJ9fSJdLFszLDQsIkhfe0JfezIxfX0iXSxbNCw0LCJIX3tCX3syMn19Il0sWzIsMSwiXFx0ZXh0e1NwbGl0fSJdLFszLDAsIlxcdGV4dHtTdG9wfSJdLFswLDIsIlxcdGV4dHtTdG9wfSJdLFsxLDMsIlxcdGV4dHtTcGxpdH0iXSxbMywzLCJcXHRleHR7U3BsaXR9Il0sWzQsMiwiXFx0ZXh0e1N0b3B9Il0sWzAsNywiXFx0ZXh0e2lmIH0gcF97XFxic2V0X3swfX0gXFxsZSBcXGFscGhhIiwyXSxbNywxXSxbNywyXSxbMiwxMl0sWzIsMTFdLFsxLDldLFsxMCwzXSxbMTAsNF0sWzExLDVdLFsxMSw2XSxbMSwxMF0sWzAsOCwiXFx0ZXh0e2lmIH0gcF97XFxic2V0X3swfX0gPiBcXGFscGhhIl1d&macro_url=https%3A%2F%2Fgist.githubusercontent.com%2Fjwbowers%2Fc985bd71a3ec90b4e3d7e82595a8d6db%2Fraw%2F1ff36ee70583a2289e25eaa5d4bfe9fbdd51dcbd%2Fgistfile1.txt
 
-\section{Recap of the method and notation}
-
-Imagine that we have hypotheses ordered in an inverted tree-like structure as
-shown in Figure~\ref{fig:simp_alg}.  We use this ordering to impose a
-\textbf{stopping rule} and a \textbf{monotonicity rule}.\footnote{We combine
-the \autocite{goeman2010sequential}, \autocite{goeman2012inheritance}, and
-\autocite{rosenbaum2008a} ideas.} We show below that these rules allow weak
-control of the family wise error rate (FWER) of testing the multiple hypotheses
-represented in the tree --- control of the FWER when all of the hypotheses in
-the tree are true. Then we show that these rules are not sufficient for strong
-control of the FWER and add two rules which allow such control.
-
-We explain the rules here and then use them in propositions 1 and 2, below.
+We explain the rules here and then use them in propositions 1 and 2 and their
+related proofs and simulation studies, below.
 
 \paragraph*{Notation} We use $\bset$ to refer to the set of blocks relevant to
 a given hypothesis. And write $\hyp{0}$ to refer to the hypothesis of no
@@ -201,7 +202,7 @@ that the following three rules suffice for weak control of the FWER.
     \rightarrow \hyp{3}$). Any given hypothesis can only be tested
     if all its ancestor hypotheses on a path have been rejected. We stop
     testing once a hypothesis has not been rejected or once the path ends with
-    a single block or node with no descendents (a "leaf" of the
+    a single block or node with no descendents (a ``leaf'' of the
     tree).
 
 \item[The \textbf{monotonicity rule}] tells us that even if all ancestor
@@ -210,7 +211,7 @@ that the following three rules suffice for weak control of the FWER.
   used in rejecting the ancestor hypotheses. In practice, with $\alpha$ fixed,
   following this rule amounts to a restriction that $p$-values never decrease
     along a path.(This is like the \textcite{goeman2010sequential}
-  "monotonicity" assumption).
+  ``monotonicity'' assumption).
 
 
 \item[The \textbf{false positive rate rule}]  In the case of fixed $\alpha$ we
@@ -231,21 +232,26 @@ We then show that strong control of the FWER requires two more rules.
 
   \item[The \textbf{sample splitting rule}] Although one could organize
     hypotheses in order where each hypothesis is tested on the same number of
-    units in this case, we require that the sample size at each node be
-    strictly less than the sample size of its parent. This maps directly onto
-    the application --- where we are trying to separate blocks or groups of
-    blocks within which the treatment effect is detectable from those within
-    which it is not detectable. In practice, the sample size goes down quickly.
-    For example in a k-ary tree with $k=2$ nodes at each level below the root
-    and $l=3$ levels, and splitting the sample into equal numbers of blocks at
-    each level, we have, say, $B$ total blocks used for $\hyp{0}$, $B/2$ blocks
-    used for each of $\hyp{1}$ and $\hyp{2}$, and $(B/2)/2=B/4$ for each of
+    units (say the hypotheses are about different elements of an index) in this
+    case, we require that the sample size at each node be strictly less than
+    the sample size of its parent. This maps directly onto the application ---
+    where we are trying to separate blocks or groups of blocks within which the
+    treatment effect is detectable from those within which it is not
+    detectable. In practice, the sample size goes down quickly. For example in
+    a k-ary tree with $k=2$ nodes at each level below the root and $l=3$
+    levels, and splitting the sample into equal numbers of blocks at each
+    level, we have, say, $B$ total blocks used for $\hyp{0}$, $B/2$ blocks used
+    for each of $\hyp{1}$ and $\hyp{2}$, and $(B/2)/2=B/4$ for each of
     $\hyp{3}, \ldots, \hyp{6}$ and $(B/4)/2=B/8$ for the nodes at the next
     level. This also implies limits on the sizes of the tree, with $B=100$, a
     tree with $k=2$ can have no more than $l=5$.\footnote{We know that the
     number of nodes in a complete $k$-ary tree is $(k^{l+1}-1)/(k-1)$ and the
     maximum number of levels in a tree with $k$ nodes at each level with $B$
-    total nodes is $l = \left\lfloor \log_k \left( B (k - 1) + 1 \right) \right\rfloor - 1$.}
+    total nodes is $l = \left\lfloor \log_k \left( B (k - 1) + 1 \right)
+    \right\rfloor - 1$.} This rule not necessary for control of the FWER in the
+    weak sense --- it is not used in the proof below and we can show that
+    simulation studies without sample splitting also control the FWER when all
+    hypotheses are true.
 
   \item[The \textbf{local adjustment rule}] When some nodes have non-null
     effects (or are ancestors of leaves with non-null effects) then the gating
@@ -261,6 +267,12 @@ We then show that strong control of the FWER requires two more rules.
     adjustment.\footnote{We think that this adjustment is conservative. We
     leave for another project the derivation of the optimal local adjustment.}
 
+  \item[Optional rule: the \textbf{global adjustment rule}] It is possible that
+    we can skip the local adjustment rule and just do a global adjustment after
+    all of the nodes have been tested following the other rules. We may leave
+    this rule for a different paper but we explored it in the simulations that
+    we show below.
+
 \end{description}
 
 \section{Weak Control of the FWER using the rules}
@@ -273,7 +285,7 @@ reduction at each level of the tree, for example for covariates gathered into
 indices, or other multi-item scores.
 
 
-\begin{proposition}{The three rules suffice to controls FWER all hypotheses are true}\label{prop:weakctrl}
+\begin{proposition}{The three rules suffice to control FWER all hypotheses are true}\label{prop:weakctrl}
 
   A family of hypotheses with individually controlled false positive rates, such
   as permutation tests from a randomized experiment, organized on a $k$-ary
@@ -356,15 +368,18 @@ indices, or other multi-item scores.
   p_1 \le \alpha) \le \alpha$, and so on.
 
   Thus, for any given branch, the probability that all tests along that branch
-  yield rejections is at most the product of probabilities at each level.
+  yield rejections is at most the product of probabilities at each level and
+  since the probabilities are all less than $\alpha$, the product is less than
+  $\alpha$.
 
   \paragraph*{Conclusion}
 
-  This shows that even though there may be $k$ children at level 1, $k^2$ at
-  level 2, and so on, the overall probability that any false rejection occurs in
-  the tree is bounded by the probability that the root is falsely rejected by the \textbf{stopping rule}. Since
-  the root is tested only once and its rejection probability is at most $\alpha$,
-  the procedure --- by gating further tests on the rejection of the root --- ensures that
+  This reasoning shows that even though there may be $k$ children at level 1,
+  $k^2$ at level 2, and so on, the overall probability that any false rejection
+  occurs in the tree is bounded by the probability that the root i%s falsely
+  rejected by the \textbf{stopping rule}. Since the root is tested only once
+  and its rejection probability is at most $\alpha$, the procedure --- by
+  gating further tests on the rejection of the root --- ensures that
   $\Pr(\text{at least one false rejection}) \le \alpha$.
 
   In summary, the law of total probability allows us to break down the overall
@@ -372,7 +387,8 @@ indices, or other multi-item scores.
   not), and since no testing occurs when $p_0 > \alpha$, the entire error is
   controlled by the root’s rejection probability, which is at most $\alpha$.
 
-  Thus, the entire procedure controls the FWER at level $\alpha$ under the complete null hypothesis.
+  Thus, the entire procedure controls the FWER at level $\alpha$ under the
+  complete null hypothesis.
 
 \end{proof}
 
@@ -382,21 +398,36 @@ We created a simple simulation study to illustrate this logic.
 
 Given a specification of a complete $k$-ary tree using $k$ nodes per level and
 $l$ levels we drew $p$-values from a uniform distribution following the rules:
-For the root node, $p_0 \sim U(0,1)$ (thereby instantiating the \textbf{false
-positive rule}). If $p_0 \le \alpha$, we drew $p_{l=1,k}$ $p$-values from
-$U(p_0,1)$ (implementing the \textbf{monotonicity rule}) otherwise we stopped
-testing. For any of the $k$ $p$-values at level 1 where $p_{l=1,k} \le \alpha$,
-we generated $p$-values for its children with $U(p_{\text{parent $p$}},1)$,
-implementing the \textbf{stopping rule} as we descended into the tree towards
-the leaves. For each tree, we repeated this procedure 10,000 times, recording
-whether any of the $p$-values in the tree of true null hypotheses were $\le
-\alpha$. The proportion of simulations with at least one such false rejection
-is a measure of the FWER.
+For the root node, $p_0 \sim U(0,1)$; a draw which respects the \textbf{false
+positive rule} such that $\Pr(p_0 \le \alpha) <= \alpha$ in this case. If $p_0
+\le \alpha$, we drew $p_{l=1,k}$ $p$-values from $U(p_0,1)$ (implementing the
+\textbf{monotonicity rule}) otherwise we stopped testing. For any of the $k$
+$p$-values at level 1 where $p_{l=1,k} \le \alpha$, we generated $p$-values for
+its children with $U(p_{\text{parent $p$}},1)$, implementing the
+\textbf{stopping rule} as we descended into the tree towards the leaves. For
+each tree, we repeated this procedure 10,000 times, recording whether any of
+the $p$-values in the tree of true null hypotheses were $\le \alpha$. The
+proportion of simulations with at least one such false rejection is a measure
+of the FWER.
 
-The following table shows the results.
+% see Simple_analysis/results_exploration.R
+Table~\ref{tab:weak_control_sim} shows the results. Whether the tree has 2
+nodes per level or 100, the rules lead to maximum FWER that are within
+simulation error (with 10,000 simulations a rough measure of simulation error
+is $2 \times \sqrt{.05 (1-.05)/10000}$ so we would expect results as large as
+$.05 +.004 = .054$ given the variability arising from simulation).
 
-TODO: insert table.
+\input{weak_control_sim_tab.tex}
 
+Notice that the rules lead the algorithm to nearly always stop after testing
+the single root node (which produces $p_0 \le .05$ in less than 5\% of the
+simulations). This is true even when the trees have many nodes and many leaves.
+In contrast the bottom-up procedure would test in each of the leaves and then
+adjust the results of all of those tests. In this table we see that the
+bottom-up procedure would be required to do thousands of tests: its FWER would
+be controlled (not shown here) and we will show later when the power of the
+tests are relevant, this requirement to do so many tests makes the bottom-up
+approach very unlikely to detect effects when they exist.
 
 \paragraph*{Why might weak control suffice?}
 
