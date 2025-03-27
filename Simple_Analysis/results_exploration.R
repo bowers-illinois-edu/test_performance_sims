@@ -8,6 +8,7 @@ library(data.table)
 library(conflicted)
 library(ggplot2)
 library(viridis)
+library(xtable)
 conflicts_prefer(dplyr::filter)
 
 # load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
@@ -15,20 +16,17 @@ conflicts_prefer(dplyr::filter)
 load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
 
 ## we use alpha=.05 below
-## and simulation error is this
-sim_se <- 2 * sqrt(.05 * (1 - .05) / unique(simp_simsres_latest$sims))
-## We want to be less that this number:
+## and maximum simulation error is this
+sim_se <- 2 * sqrt(.5 * (1 - .5) / unique(simp_simsres_latest$sims))
+##  Since alpha=.05, we want to be less than this number:
 .05 + sim_se
 
-## simp_simsres_unadj <- simp_simsres_unadj %>%
-##   filter(!is.na(prop_tau_nonzero)) %>%
-##   droplevels() %>% as.data.table()
 
 ## using the dtplyr approach for readablilty for those not used to data.table syntax
 
+################### WEAK CONTROL OF THE FWER ############
 ## Check on weak control: looks good. No serious departures from nominal
 ## control when all H0 is true
-
 
 key_char <- c("false_error", "power", "num_leaves_tested", "leaf_power", "num_nodes_tested")
 
@@ -43,6 +41,9 @@ summary_fn <- function(x) {
   }
 }
 
+## For those simulations where the null of no effect is true, summarize the key
+## characteristics across all of the tree sizes by type of adjustment and rule.
+
 res_all_true <- simp_simsres_latest[prop_tau_nonzero == 0,
   {
     res_list <- lapply(key_char, function(nm) {
@@ -52,11 +53,65 @@ res_all_true <- simp_simsres_latest[prop_tau_nonzero == 0,
     })
     rbindlist(res_list)
   },
-  by = c("alpha_fn", "adj_effN", "local_adj_fn")
+  by = c("alpha_fn", "adj_effN", "local_adj_fn", "final_adj_method")
 ]
 
-## We have weak control
-res_all_true %>% filter(variable %in% c("false_error"))
+## We have weak control regardless of the local or global adjustment etc.
+max_fwer_weak_control <- res_all_true %>%
+  filter(variable %in% c("false_error") & summary_stat == "max")
+stopifnot(max_fwer_weak_control$value <= .05 + sim_se)
+
+## There is not appreciable variation in the control of the FWER here:
+res_all_true %>%
+  filter(variable %in% c("false_error") & summary_stat == "max") %>%
+  select(value) %>%
+  summary()
+
+## The simplest rules involve fixed alpha and no local adjustment and no global final adjustment
+## Notice that we do not even need data splitting
+
+basic_weak_control_res <- simp_simsres_latest %>%
+  filter(prop_tau_nonzero == 0 & alpha_fn == "fixed" &
+    local_adj_fn == "local_unadj_all_ps" & final_adj_method == "none") %>%
+  select(-file & one_of(c("k", "l", "adj_effN", "total_nodes", "num_leaves", key_char))) %>%
+  arrange(k, l)
+
+basic_weak_control_res
+
+weak_control_sim_tab0 <- basic_weak_control_res %>%
+  group_by(k) %>%
+  summarize(
+    min_l = min(l), max_l = max(l), max_fwer = max(false_error),
+    max_nodes_tested = max(num_nodes_tested), max_total_nodes = max(total_nodes), max_leaves = max(num_leaves)
+  )
+
+names(weak_control_sim_tab0) <- c("Nodes/Level", "Min", "Max", "Max FWER", "Max
+  Nodes Tested", "Max Nodes", "Max Leaves")
+
+weak_control_sim_tab <- xtable(weak_control_sim_tab0, digits = 3)
+
+caption(weak_control_sim_tab) <- "Maximum Family Wise Errors across 10,000
+  simulations for hypotheses using $\\alpha=.05$ on $k$-ary trees. Maximum
+  average false positive rates shown for trees with between `min levels' and
+  `max levels' for each number of nodes per level. Also shown are the total
+  nodes in the trees, the total number of terminal nodes or leaves, and the
+  maximum number of nodes tested."
+
+label(weak_control_sim_tab) <- "tab:weak_control_sim"
+
+second_row <- paste(paste(names(weak_control_sim_tab0), collapse = " & "), "\\\\", collapse = "")
+first_row <- "&\\multicolumn{2}{c}{Levels}\\\\"
+
+print(weak_control_sim_tab,
+  add.to.row = list(
+    pos = list(0, 0),
+    command = c(first_row, second_row)
+  ),
+  file = here("Paper", "weak_control_sim_tab.tex"),
+  include.rownames = FALSE,
+  include.colnames = FALSE,
+  booktabs = TRUE
+)
 
 ## When all hyps are false then of course no false errors.
 
@@ -78,59 +133,79 @@ res_all_false %>%
   filter(variable == "false_error") %>%
   summary(mean(value))
 
-## Power differences (as well as number of tests --- number of leaves detected)
+## Few big power differences across the approaches.
 
 res_all_false %>%
   filter(variable == "power" & summary_stat == "median")
 
-## So, the top down approach tests fewer leaves but tends to nearly always
+## The top down approach tests fewer leaves but tends to nearly always
 ## reject the false leaves compared to the bottom up approach which fails to
-## reject a lot (comparing leaf_power to bottom_up_power here)
+## reject a lot (comparing leaf_power to bottom_up_power here).
 
-## Now what about strong control? Without both simulating the idea of splitting
-## (adj_effN=TRUE) and local adjustment, we do not have strong control. And, in
-## fact, we need direct p-value adjustment (local_hommel_all_ps) rather than
-## the Simes local/global test.
+## For example, when k=16 and l=4, there are a total of 65536 leaves (all of
+## which tested by the bottom up approach) but we only test (on average) 4692
+## of them. We reject false nulls at the leaf level 91% of the time.
 
 simp_simsres_latest %>%
-  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1) %>%
-  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn) %>%
+  filter(prop_tau_nonzero == 1) %>%
+  select(one_of(c("k", "l", vars2)))
+
+## Now what about strong control?
+## here is where we need some local and/or global adjustments.
+## excluding the k=2, l=2 example because when prop_tau_nonzero==.1 in that case there are no leaves set as a non-null effect
+some_tau_res <- simp_simsres_latest %>%
+  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1 & (k != 2 & l != 2))
+
+## Some definite failures to control FWER here
+some_tau_res %>%
+  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn, final_adj_method) %>%
   summarize(
     mean_fwer = mean(false_error),
     max_fwer = max(false_error),
     mean_bottom_up_fwer = mean(bottom_up_false_error),
-    max_bottom_up_fwer = max(bottom_up_false_error)
+    max_bottom_up_fwer = max(bottom_up_false_error),
+    mean_power = mean(power),
+    min_power = min(power),
+    mean_leaf_power = mean(leaf_power),
+    min_leaf_power = mean(leaf_power)
+  ) %>%
+  print(n = 200)
+
+## So there are multiple ways to control the FWER here and they don't look so different in power
+some_tau_res %>%
+  filter(false_error <= .05 + sim_se) %>%
+  droplevels() %>%
+  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn, final_adj_method) %>%
+  summarize(
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bottom_up_fwer = mean(bottom_up_false_error),
+    max_bottom_up_fwer = max(bottom_up_false_error),
+    mean_power = mean(power),
+    min_power = min(power),
+    mean_leaf_power = mean(leaf_power),
+    min_leaf_power = mean(leaf_power)
+  ) %>%
+  print(n = 200)
+
+## We probably don't want to have both local_hommel plus conservative alpha
+## adjustment at each step let alone plus final overall adjustment. Also use
+## the data splitting approach.
+
+some_tau_res %>%
+  filter(local_adj_fn == "local_hommel_all_ps" & !(alpha_fn %in% c("adaptive_k_adj", "fixed_k_adj")) & adj_effN & final_adj_method == "none") %>%
+  group_by(alpha_fn, prop_tau_nonzero, local_adj_fn) %>%
+  summarize(
+    mean_fwer = mean(false_error),
+    max_fwer = max(false_error),
+    mean_bottom_up_fwer = mean(bottom_up_false_error),
+    max_bottom_up_fwer = max(bottom_up_false_error),
+    mean_power = mean(power),
+    min_power = min(power),
+    mean_leaf_power = mean(leaf_power),
+    min_leaf_power = mean(leaf_power)
   ) %>%
   print(n = 100)
-
-## So, our winner is adj_effN=TRUE and local_hommel_all_ps  and we should
-## compare this against the bottom up hommel in terms of power.
-
-simp_simsres_latest %>%
-  filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps") %>%
-  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn) %>%
-  summarize(
-    mean_fwer = mean(false_error),
-    max_fwer = max(false_error),
-    mean_bottom_up_fwer = mean(bottom_up_false_error),
-    max_bottom_up_fwer = max(bottom_up_false_error)
-  )
-
-simp_simsres_latest %>%
-  filter(prop_tau_nonzero > 0 & adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps") %>%
-  group_by(adj_effN, prop_tau_nonzero, local_adj_fn) %>%
-  summarize(
-    min_power = min(power, na.rm = TRUE),
-    med_power = median(power, na.rm = TRUE),
-    max_power = max(power, na.rm = TRUE),
-    min_leaf_power = min(leaf_power, na.rm = TRUE),
-    med_leaf_power = median(leaf_power, na.rm = TRUE),
-    max_leaf_power = max(leaf_power, na.rm = TRUE),
-    min_bot_up_power = min(bottom_up_power, na.rm = TRUE),
-    med_bot_up_power = median(bottom_up_power, na.rm = TRUE),
-    max_bot_up_power = max(bottom_up_power, na.rm = TRUE)
-  )
-
 
 ## Make a data set of this:
 
