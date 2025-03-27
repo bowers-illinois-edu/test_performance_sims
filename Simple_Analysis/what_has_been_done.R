@@ -7,11 +7,11 @@ load(here("Simple_Analysis", "sim_parms.rda"))
 ## Relies on simparms being keyed to idx
 stopifnot(key(sim_parms) == "idx")
 
-## We have been doing 1000 sims
-sim_parms[, nms := do.call(paste, c("sim",.SD[,1:6], sep = "_"))]
+sim_parms[, nms := do.call(paste, c("sim", .SD[, 1:7], sep = "_"))]
 
 done <- stri_replace_all_fixed(list.files(path = here("Simple_Analysis/CSVS_latest"), patt = "[0-9]*csv"),
-  replacement = "", pattern = ".csv", vectorize_all = TRUE)
+  replacement = "", pattern = ".csv", vectorize_all = TRUE
+)
 
 idx <- sim_parms$idx # seq_len(nrow(simparms))
 done_idx <- sim_parms$idx[sim_parms$nms %in% done]
