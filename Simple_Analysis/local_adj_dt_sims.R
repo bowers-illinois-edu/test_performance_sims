@@ -12,6 +12,7 @@ library(TreeTestsSim)
 
 machine_name <- Sys.getenv("MACHINE")
 message(machine_name)
+print(machine_name)
 
 alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
 final_adj_methods <- c("none", "fdr", "fwer")
@@ -103,7 +104,7 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 
 ## Parallelizing the outer loop not the inner loop for most of the sims, but not all
 ## res <- mclapply(theidx, function(i) {
-res <- lapply(seq_len(nrow(sim_parms)), function(i) {
+res <- lapply(theidx, function(i) {
   set.seed(12345) ## same seed for each set of parms
   ## Using the key
   parms <- sim_parms[.(i)]
