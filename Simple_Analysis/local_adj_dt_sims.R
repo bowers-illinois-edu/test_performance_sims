@@ -11,6 +11,7 @@ library(TreeTestsSim)
 
 machine_name <- Sys.getenv("MACHINE")
 message(machine_name)
+print(machine_name)
 
 load(here("Simple_Analysis", "sim_parms.rda"), verbose = TRUE)
 
@@ -61,19 +62,19 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 ## Trying to keep this simple and one machine/node and use mclapply rather than
 ## future_apply or some job array via slurm which might be a good idea but basically annoying because of shipping objects around.
 
-if (length(theidx) == nrow(sim_parms)) {
-  machine_name <- Sys.getenv("MACHINE")
+#if (length(theidx) == nrow(sim_parms)) {
+ # machine_name <- Sys.getenv("MACHINE")
   if (machine_name == "CampusCluster") {
     theidx <- theidx[1:floor(length(theidx) * .75)]
   }
   if (machine_name == "Keeling") {
     theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
   }
-}
+#}
 
-## Parallelizing the outer loop not the inner loop
-res <- mclapply(theidx, function(i) {
-  ## res <- lapply(seq_len(nrow(sim_parms)), function(i) {
+## Parallelizing the outer loop not the inner loop for most of the sims, but not all
+## res <- mclapply(theidx, function(i) {
+res <- lapply(theidx, function(i) {
   set.seed(12345) ## same seed for each set of parms
   ## Using the key
   parms <- sim_parms[.(i)]
@@ -93,7 +94,8 @@ res <- mclapply(theidx, function(i) {
     alpha_method = parms$alpha_fn,
     return_details = FALSE,
     final_global_adj = parms$final_adj_method,
-    multicore = FALSE
+    multicore = TRUE
+    ##multicore = FALSE
   )
   etm <- proc.time() - ptm
   parms[, names(res) := as.list(res)]
@@ -104,7 +106,8 @@ res <- mclapply(theidx, function(i) {
   data.table::fwrite(parms, file = filename)
   message(paste(c(parms[1, 1:7], parms$time), collapse = " "))
   return(parms)
-  # })
-}, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)
+  })
+#}, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)
 
-save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", machine_name, ".rda", collapse = "")))
+## This all takes so long, that not worth actually saving.
+## save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", machine_name, ".rda", collapse = "")))

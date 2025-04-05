@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=sims_adj_latest_dt
+#SBATCH --job-name=sims_adj_latest_dt_next
 #SBATCH --ntasks-per-node=128
 #SBATCH --nodes=1
 #SBATCH --time=72:00:00
@@ -19,6 +19,7 @@ export R_DATATABLE_NUM_THREADS=1
 # export CLUSTER="cc-socket"
 export CORES=128
 export MACHINE="CampusCluster"
+export PARALLEL_TYPE="OUTER"
 
 echo "Started on: $(date --rfc-3339=seconds)"
 echo "Hostname: $(hostname)"
