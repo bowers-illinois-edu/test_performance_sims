@@ -35,6 +35,9 @@ Analysis/simparms.rda: Analysis/simparms.R
 Analysis/not_done_idx.rda: Analysis/what_has_been_done.R
 	R --file=Analysis/what_has_been_done.R
 
+Simple_Analysis/not_done_idx.rda: Simple_Analysis/what_has_been_done.R
+	R --file=Simple_Analysis/what_has_been_done.R
+
 ## Collect the CSV files together into an R dataset
 ## Use python for the merging of csv files mostly because I want to learn more about python
 ## the python environment exists for the libraries/packages needed by concat_clean.py
@@ -85,39 +88,49 @@ Data/equal_blocksize_data.rda: Data/block_datasets.done
 ## then concatenate the CSVS into the merged_results.csv, convert the csv to
 ## an rda file, and then use that file for graphs, tables, etc.
 
-Simple_Analysis/simple_raw_unadj_results.rda: Simple_Analysis/simple_unadj_sims.R \
-	Simple_Analysis/simple_p_draws_fns.R
-	R --file=Simple_Analysis/simple_unadj_sims.R
+### Delete these and those files as deprecated
+###Simple_Analysis/simple_raw_unadj_results.rda: Simple_Analysis/simple_unadj_sims.R \
+###	Simple_Analysis/simple_p_draws_fns.R
+###	R --file=Simple_Analysis/simple_unadj_sims.R
+###
+##### In theory this next should depend on the csv files themselves but there are thousands.
+##### So, I just create a file called ready_to_merge.done by hand at the command line
+###
+###Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done:
+###	touch Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done
+###
+###Simple_Analysis/simple_sims_unadj_merged_results.csv: Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done \
+###	Simple_Analysis/simple_concat_clean_unadj.py
+###	source .venv/bin/activate && python Simple_Analysis/simple_concat_clean_unadj.py
+###
+###Simple_Analysis/simple_sims_unadj_results.rda: Simple_Analysis/simple_sims_unadj_merged_results.csv
+###	R --file=Simple_Analysis/simple_unadj_make_rda.R
+###
+###Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done:
+###	touch Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done
+###
+###Simple_Analysis/simple_sims_adj_merged_results.csv: Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done \
+###	Simple_Analysis/concat_clean_adj.py
+###	source .venv/bin/activate && python Simple_Analysis/concat_clean_adj.py
+###
+###Simple_Analysis/simple_sims_adj_results.rda: Simple_Analysis/simple_sims_adj_merged_results.csv
+###	R --file=Simple_Analysis/simple_adj_make_rda.R
 
-## In theory this next should depend on the csv files themselves but there are thousands.
-## So, I just create a file called ready_to_merge.done by hand at the command line
+## Make the file containing each set of simulation parameters on each row
+Simple_Analysis/sim_parms.rda: Simple_Analysis/sim_parms.R
+	R --file=Simple_Analysis/sim_parms.R
 
-Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done:
-	touch Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done
+## This just is a chunk that records that that the simulation has completed
+## (this is not the last simulation since that depends on the parallelization)
+## Sadly, this next step has to be done by hand --- watching over the
+## simulations as they run, time out, etc.. ## by hand rsync the csv files into
+## the local machine for concatenation, etc..
 
-Simple_Analysis/simple_sims_unadj_merged_results.csv: Simple_Analysis/CSVS_Unadj/ready_to_merge_unadj_csvs.done \
-	Simple_Analysis/simple_concat_clean_unadj.py
-	source .venv/bin/activate && python Simple_Analysis/simple_concat_clean_unadj.py
+Simple_Analysis/CSVS_latest/sims_done.done: Simple_Analysis/sim_parms.rda
+	#R --file=Simple_Analysis/local_adj_dt_sims.R ## this is commented out because we never run this on a single computer in less than a day
+	touch Simple_Analysis/CSVS_latest/sims_done.done
 
-Simple_Analysis/simple_sims_unadj_results.rda: Simple_Analysis/simple_sims_unadj_merged_results.csv
-	R --file=Simple_Analysis/simple_unadj_make_rda.R
-
-
-Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done:
-	touch Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done
-
-Simple_Analysis/simple_sims_adj_merged_results.csv: Simple_Analysis/CSVS_adj/ready_to_merge_adj_csvs.done \
-	Simple_Analysis/concat_clean_adj.py
-	source .venv/bin/activate && python Simple_Analysis/concat_clean_adj.py
-
-Simple_Analysis/simple_sims_adj_results.rda: Simple_Analysis/simple_sims_adj_merged_results.csv
-	R --file=Simple_Analysis/simple_adj_make_rda.R
-
-
-Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done:
-	touch Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done
-
-Simple_Analysis/simple_sims_latest_merged_results.csv: Simple_Analysis/CSVS_latest/ready_to_merge_latest_csvs.done \
+Simple_Analysis/simple_sims_latest_merged_results.csv: Simple_Analysis/CSVS_latest/sims_done.done \
 	Simple_Analysis/concat_clean_latest.py
 	source .venv/bin/activate && python Simple_Analysis/concat_clean_latest.py
 
