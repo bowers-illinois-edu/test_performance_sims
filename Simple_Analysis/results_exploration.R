@@ -14,13 +14,17 @@ conflicts_prefer(dplyr::filter)
 # load(here("Simple_Analysis", "simple_sims_unadj_results.rda"), verbose = TRUE)
 # load(here("Simple_Analysis", "simple_sims_adj_results.rda"), verbose = TRUE)
 load(here("Simple_Analysis", "simple_sims_latest_results.rda"), verbose = TRUE)
+load(here("Simple_Analysis", "sim_parms.rda"))
+
+## Look at progress of the simulations
+with(sim_parms, table(k, l))
+with(simp_simsres_latest, table(k, l))
 
 ## we use alpha=.05 below
 ## and maximum simulation error is this
 sim_se <- 2 * sqrt(.5 * (1 - .5) / unique(simp_simsres_latest$sims))
 ##  Since alpha=.05, we want to be less than this number:
 .05 + sim_se
-
 
 ## using the dtplyr approach for readablilty for those not used to data.table syntax
 
@@ -81,26 +85,40 @@ basic_weak_control_res
 weak_control_sim_tab0 <- basic_weak_control_res %>%
   group_by(k) %>%
   summarize(
-    min_l = min(l), max_l = max(l), max_fwer = max(false_error),
-    max_nodes_tested = max(num_nodes_tested), max_total_nodes = max(total_nodes), max_leaves = max(num_leaves)
+    min_l = min(l),
+    max_l = max(l),
+    max_fwer = max(false_error),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves))
   )
 
-names(weak_control_sim_tab0) <- c("Nodes/Level", "Min", "Max", "Max FWER", "Max
-  Nodes Tested", "Max Nodes", "Max Leaves")
+names(weak_control_sim_tab0) <- c("$k$", "Min", "Max", "FWER", "Tests", "Min", "Max", "Min", "Max")
+# weak_control_sim_tab0[["Max Leaves"]] <- as.integer(weak_control_sim_tab0[["Max Leaves"]])
 
 weak_control_sim_tab <- xtable(weak_control_sim_tab0, digits = 3)
 
-caption(weak_control_sim_tab) <- "Maximum Family Wise Errors across 10,000
-  simulations for hypotheses using $\\alpha=.05$ on $k$-ary trees. Maximum
-  average false positive rates shown for trees with between `min levels' and
-  `max levels' for each number of nodes per level. Also shown are the total
-  nodes in the trees, the total number of terminal nodes or leaves, and the
-  maximum number of nodes tested."
+caption(weak_control_sim_tab) <- "This table show weak-control of the
+  family-wise error rate across 10,000 simulations for hypotheses using
+  $\\alpha=.05$ on $k$-ary trees with $k$ nodes per level where the hypothesis
+  of no effects is true for all nodes. Each row summarizes the results of
+  simulations for the trees with a given $k$ and between min and max levels.
+  Maximum average false positive rates shown in the 'Max FWER' column. The
+  maximum nodes tested are shown in 'Max Tests'. And information about the
+  range of trees is also shown: the total number of nodes in the trees and the
+  total number of terminal nodes or leaves."
 
 label(weak_control_sim_tab) <- "tab:weak_control_sim"
 
 second_row <- paste(paste(names(weak_control_sim_tab0), collapse = " & "), "\\\\", collapse = "")
-first_row <- "&\\multicolumn{2}{c}{Levels}\\\\"
+first_row <- "&\\multicolumn{2}{c}{Levels} &Max&Max& \\multicolumn{2}{c}{Nodes} & \\multicolumn{2}{c}{Leaves}\\\\"
+
+align(weak_control_sim_tab) <- xalign(weak_control_sim_tab0)
+# align(weak_control_sim_tab)["Max Tests"] <- "b{1cm}"
+# align(weak_control_sim_tab)["Max FWER"] <- "b{1cm}"
+
 
 print(weak_control_sim_tab,
   add.to.row = list(
@@ -116,6 +134,7 @@ print(weak_control_sim_tab,
 ## When all hyps are false then of course no false errors.
 
 vars2 <- c("power", "leaf_power", "num_leaves_tested", "num_leaves", "bottom_up_power", "false_error")
+
 res_all_false <- simp_simsres_latest[prop_tau_nonzero == 1,
   {
     res_list <- lapply(vars2, function(nm) {
@@ -133,10 +152,16 @@ res_all_false %>%
   filter(variable == "false_error") %>%
   summary(mean(value))
 
-## Few big power differences across the approaches.
+
+## Few big power differences across the approaches because the power of the
+## individual tests is more or less the same across all of them (interesting
+## that the adj_effN doesn't distinguish between them, though.)
 
 res_all_false %>%
-  filter(variable == "power" & summary_stat == "median")
+  filter(variable == "power" & summary_stat == "max")
+
+res_all_false %>%
+  filter(variable == "leaf_power" & summary_stat == "max")
 
 ## The top down approach tests fewer leaves but tends to nearly always
 ## reject the false leaves compared to the bottom up approach which fails to
@@ -193,7 +218,8 @@ some_tau_res %>%
 ## the data splitting approach.
 
 some_tau_res %>%
-  filter(local_adj_fn == "local_hommel_all_ps" & !(alpha_fn %in% c("adaptive_k_adj", "fixed_k_adj")) & adj_effN & final_adj_method == "none") %>%
+  filter(local_adj_fn == "local_hommel_all_ps" &
+    !(alpha_fn %in% c("adaptive_k_adj", "fixed_k_adj")) & adj_effN & final_adj_method == "none") %>%
   group_by(alpha_fn, prop_tau_nonzero, local_adj_fn) %>%
   summarize(
     mean_fwer = mean(false_error),
@@ -207,7 +233,8 @@ some_tau_res %>%
   ) %>%
   print(n = 100)
 
-## Make a data set of this:
+## Make a data set of this (with simulated data splitting)
+## Allow uncontrolled FWER to learn where we see it
 
 strong_ctrl_res <- simp_simsres_latest %>%
   filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps" &
@@ -215,14 +242,23 @@ strong_ctrl_res <- simp_simsres_latest %>%
   as_tibble()
 
 ## Here we didn't get to test any leaves. The bottom up approach does 1024 tests with very low power
-## But the top down approach stops early --- it tells us **correctly** that at least one of the leaves of a rejected parent is nonnull
+
+## But the top down approach stops early --- it tells us **correctly** that at
+## least one of the leaves of a rejected parent is nonnul
 ## but it also says that we cannot detect the specific leaf
 ##
+
+## This is just a summary of what has been run
 with(strong_ctrl_res, table(k, l))
+
 ## When it does test a nonnull leaf, it always rejects
 summary(strong_ctrl_res$num_leaves_tested)
+## nearly always
 summary(strong_ctrl_res$leaf_power)
-table(strong_ctrl_res$leaf_power, exclude = c())
+
+strong_ctrl_res %>%
+  filter(leaf_power < .5) %>%
+  select(k, l, prop_tau_nonzero, false_error, power, num_nodes_tested, leaf_power, num_leaves, num_leaves_tested, bottom_up_false_error, bottom_up_power)
 
 ## Often stops after just a few nodes: (these are means, TODO record more than mean, like max and mid and median)
 ## rarely (on average) tests leaves
