@@ -314,10 +314,12 @@ indices, or other multi-item scores.
   Because of the stopping rule, a hypothesis node at any level is tested only
   if all its ancestor hypotheses had $p$-values $\le \alpha$. This means that,
   the event that any node in the tree is tested is a subset of the event of a
-  false rejection at the root node, $\{p_0 \le \alpha\}$. Let's write the event
-  of at least one false rejection on the tree as as $E$, and the stopping rule
-  means that this event is a subset of the event of a false rejection at the
+  false rejection at the root node, $\{p_0 \le \alpha\}$. Write the event
+  of at least one false rejection on the tree as as $E$. The stopping rule
+  makes this event a subset of the event of a false rejection at the
   root so $E \subseteq \{p_0 \le \alpha\}$.
+
+  \paragraph*{Step 3. The law of total probability}
 
   Now, let’s use the law of total probability. We partition the sample space into
   two disjoint events: $A = \{p_0 \le \alpha\}$ (the root test is significant,
@@ -372,25 +374,44 @@ indices, or other multi-item scores.
   since the probabilities are all less than $\alpha$, the product is less than
   $\alpha$.
 
+\paragraph*{An alternative approach:}
+
+Consider a tree with two levels and $k$ nodes per level. In this case we have
+$p_0$ (at the root or first level) and then $p_1, \ldots, p_k$ at the second
+level. What is the probability of making at least one false positive error
+among these tests?
+
+We might write this as $\Pr(\min(p_0,p_1,\ldots,p_k) \le \alpha)$. By the
+\textbf{false positive rule} we know that $\Pr(p_0 \le \alpha) \le \alpha$. By
+the \textbf{monotonicity rule} and \textbf{stopping rule} we know that
+$\min(p_0,p_1,\ldots,p_k) = p_0$. So, $\Pr(\min(p_0,p_1,\ldots,p_k) \le
+\alpha)=\Pr(p_0 \le alpha) \le \alpha$.
+
+
   \paragraph*{Conclusion}
 
   This reasoning shows that even though there may be $k$ children at level 1,
   $k^2$ at level 2, and so on, the overall probability that any false rejection
-  occurs in the tree is bounded by the probability that the root i%s falsely
-  rejected by the \textbf{stopping rule}. Since the root is tested only once
-  and its rejection probability is at most $\alpha$, the procedure --- by
-  gating further tests on the rejection of the root --- ensures that
-  $\Pr(\text{at least one false rejection}) \le \alpha$.
+  occurs in the tree is bounded by the probability that the root is falsely
+  rejected by the \textbf{stopping rule} and \textbf{monotonicity rule} and
+  \textbf{false positive rule}. Since the root is tested only once and its
+  rejection probability is at most $\alpha$, the procedure --- by gating
+  further tests on the rejection of the root --- ensures that $\Pr(\text{at
+  least one false rejection}) \le \alpha$.
 
   In summary, the law of total probability allows us to break down the overall
   error probability into two parts (depending on whether $p_0 \le \alpha$ or
-  not), and since no testing occurs when $p_0 > \alpha$, the entire error is
-  controlled by the root’s rejection probability, which is at most $\alpha$.
+  not), and since no testing occurs when $p_0 > \alpha$, the entire false
+  positive error is controlled by the root’s rejection probability, which is at
+  most $\alpha$.
 
   Thus, the entire procedure controls the FWER at level $\alpha$ under the
   complete null hypothesis.
 
 \end{proof}
+
+\textbf{To Notice:} Although we described the procedure using the idea of data
+splitting, this was not necessary in the proof.
 
 \subsection*{Simulation Study}
 
@@ -400,15 +421,17 @@ Given a specification of a complete $k$-ary tree using $k$ nodes per level and
 $l$ levels we drew $p$-values from a uniform distribution following the rules:
 For the root node, $p_0 \sim U(0,1)$; a draw which respects the \textbf{false
 positive rule} such that $\Pr(p_0 \le \alpha) <= \alpha$ in this case. If $p_0
-\le \alpha$, we drew $p_{l=1,k}$ $p$-values from $U(p_0,1)$ (implementing the
-\textbf{monotonicity rule}) otherwise we stopped testing. For any of the $k$
-$p$-values at level 1 where $p_{l=1,k} \le \alpha$, we generated $p$-values for
-its children with $U(p_{\text{parent $p$}},1)$, implementing the
-\textbf{stopping rule} as we descended into the tree towards the leaves. For
-each tree, we repeated this procedure 10,000 times, recording whether any of
-the $p$-values in the tree of true null hypotheses were $\le \alpha$. The
-proportion of simulations with at least one such false rejection is a measure
-of the FWER.
+\le \alpha$, we drew $p_{l=1,k}$ independent $p$-values from $U(p_0,1)$
+(implementing the \textbf{monotonicity rule}) otherwise we stopped testing. For
+any of the $k$ $p$-values at level 1 where $p_{l=1,k} \le \alpha$, we generated
+$p$-values for its children with $U(p_{\text{parent $p$}},1)$, implementing the
+\textbf{stopping rule} as we descended into the tree towards the leaves. In
+this simulation we did not change the power of the test (i.e. representing the
+idea of data splitting) other than to enforce the \textbf{stopping rule} and
+\textbf{monotonicity rule}. For each tree, we repeated this procedure 10,000
+times, recording whether any of the $p$-values in the tree of true null
+hypotheses were $\le \alpha$. The proportion of simulations with at least one
+such false rejection is a measure of the FWER.
 
 % see Simple_analysis/results_exploration.R
 Table~\ref{tab:weak_control_sim} shows the results. Whether the tree has 2
@@ -446,9 +469,14 @@ large $k$ and $l$ we might have a severely uncontrolled FWER but with smaller
 trees the trade-off might be worthwhile?
 
 
-\section{Strong control of the FWER adding rules}
+\section{Strong control of the FWER: More Rules}
 
+The three rules that allow control of the FWER in a weak sense do not control
+it in a strong sense. For example, Table~\ref{tab:strong_control_naive} shows
+that as the number of nodes per level increase, the minimum FWER also increases
+above .05.
 
+\input{strong_control_naive_tab.tex}
 
 %\autocite{miecznikowski2023error}
 \subsection{Summary}
