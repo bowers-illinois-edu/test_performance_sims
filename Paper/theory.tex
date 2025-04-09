@@ -473,10 +473,33 @@ trees the trade-off might be worthwhile?
 
 The three rules that allow control of the FWER in a weak sense do not control
 it in a strong sense. For example, Table~\ref{tab:strong_control_naive} shows
-that as the number of nodes per level increase, the minimum FWER also increases
-above .05.
+the situation where half of the leaves of each tree have non-null causal
+effects. All of the ancestors of a leaf with a non-null effect is defined to
+also contain a non-null effect (alterantively to be a node for which the null
+hypothesis of no effects is false). Whenever the null hypothesis of no effects
+is false for any leaf of a tree it is also false for the root of the tree and
+for all nodes on the path between the root and that leaf. This table shows that
+as the number of nodes per level increase, the minimum FWER also increases
+above .05. This table also shows the effects of simulated data splitting: the
+rows at the top show less control of the FWER (in all but the smallest trees
+the FWER is not controlled) while at the bottom of the table (where "Data
+Splitting" is "TRUE"), we see lower false positive rates in the trees with
+fewer nodes per level (for example, when $k=2$, the maximum FWER is .05 even
+with 18 levels and thus 524,287 total nodes).\footnote{We simulated data
+splitting by increasing the parameter of the beta distribution governing the
+production of $p$-values for nodes where the null hypothesis of no effects was
+false. For example, a Beta distribution with $a=.1$ and $b=1$ will produce
+about 74\% of $p$-values less than .05 (in R code we can see this with
+\texttt{pbeta(.05,.1,1)}. We represent data splitting as reducing the power of
+this test from .74 by dividing by the number of nodes at a given level and then
+stopping once the power of the test was roughly .20. In actual practice we
+would split the data itself and stop testing once we could no longer split
+rather than execute tests on every node in a complete tree as we do in these
+simulations.}
 
 \input{strong_control_naive_tab.tex}
+
+%TODO: Show table where it does control and list approaches. They haven in common that they involve an additional adjustment --- whether local (within a level) or global.
 
 %\autocite{miecznikowski2023error}
 \subsection{Summary}

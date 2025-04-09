@@ -82,7 +82,9 @@ basic_weak_control_res <- simp_simsres_latest %>%
 
 basic_weak_control_res
 
+## Make the table with the non-data splitting versions
 weak_control_sim_tab0 <- basic_weak_control_res %>%
+  filter(adj_effN == FALSE) %>%
   group_by(k) %>%
   summarize(
     min_l = min(l),
@@ -113,12 +115,11 @@ caption(weak_control_sim_tab) <- "This table show weak-control of the
 label(weak_control_sim_tab) <- "tab:weak_control_sim"
 
 second_row <- paste(paste(names(weak_control_sim_tab0), collapse = " & "), "\\\\", collapse = "")
-first_row <- "&\\multicolumn{2}{c}{Levels} &Max&Max& \\multicolumn{2}{c}{Nodes} & \\multicolumn{2}{c}{Leaves}\\\\"
+first_row <- "&\\multicolumn{2}{c}{Levels} &Max&Avg. Max& \\multicolumn{2}{c}{Nodes} & \\multicolumn{2}{c}{Leaves}\\\\"
 
 align(weak_control_sim_tab) <- xalign(weak_control_sim_tab0)
 # align(weak_control_sim_tab)["Max Tests"] <- "b{1cm}"
 # align(weak_control_sim_tab)["Max FWER"] <- "b{1cm}"
-
 
 print(weak_control_sim_tab,
   add.to.row = list(
@@ -175,51 +176,115 @@ simp_simsres_latest %>%
   filter(prop_tau_nonzero == 1) %>%
   select(one_of(c("k", "l", vars2)))
 
+
+####################################################
 ## Now what about strong control?
 ## here is where we need some local and/or global adjustments.
 ## excluding the k=2, l=2 example because when prop_tau_nonzero==.1 in that case there are no leaves set as a non-null effect
 some_tau_res <- simp_simsres_latest %>%
-  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1 & (k != 2 & l != 2))
+  filter(prop_tau_nonzero > 0 & prop_tau_nonzero < 1)
 
-## Some definite failures to control FWER here
-some_tau_res %>%
-  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn, final_adj_method) %>%
+## The simple approach does not control FWER in a strong sense
+some_tau_naive <- simp_simsres_latest %>%
+  filter(prop_tau_nonzero == .5 &
+    alpha_fn == "fixed" & local_adj_fn == "local_unadj_all_ps" & final_adj_method == "none") %>%
+  select(-file & one_of(c("k", "l", "adj_effN", "total_nodes", "num_leaves", "prop_tau_nonzero", key_char)))
+
+some_tau_naive
+
+strong_control_naive_tab0 <- some_tau_naive %>%
+  group_by(k, adj_effN) %>%
   summarize(
-    mean_fwer = mean(false_error),
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
     max_fwer = max(false_error),
-    mean_bottom_up_fwer = mean(bottom_up_false_error),
-    max_bottom_up_fwer = max(bottom_up_false_error),
-    mean_power = mean(power),
-    min_power = min(power),
-    mean_leaf_power = mean(leaf_power),
-    min_leaf_power = mean(leaf_power)
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves))
   ) %>%
-  print(n = 200)
+  arrange(adj_effN, k)
 
-## So there are multiple ways to control the FWER here and they don't look so different in power
-some_tau_res %>%
-  filter(false_error <= .05 + sim_se) %>%
+print(strong_control_naive_tab0, n = 100)
+
+names(strong_control_naive_tab0) <- c("$k$", "Splitting", "Min", "Max", "Min", "Max", "Tests", "Min", "Max", "Min", "Max")
+# strong_control_naive_tab0[["Max Leaves"]] <- as.integer(strong_control_naive_tab0[["Max Leaves"]])
+
+strong_control_naive_tab <- xtable(strong_control_naive_tab0, digits = 2)
+
+caption(strong_control_naive_tab) <- "This table shows  lack of strong-control
+  of the family-wise error rate across 10,000 simulations for hypotheses using
+  $\\alpha=.05$ on $k$-ary trees with $k$ nodes per level where the hypothesis
+  of no effects is false for half of the leaves. Any ancestor of a leaf where
+  the null hypothesis of no effects is false is also false by construction.
+  Each row summarizes the results of simulations for the trees with a given $k$
+  and between min and max levels. Minimum and maximum average false positive
+  rates shown in the 'Min' and 'Max' FWER columns. The average maximum nodes
+  tested across the 10,000 simulatiosn are shown in 'Avg. Max Tests'. And
+  information about the range of trees is also shown: the total number of nodes
+  in the trees and the total number of terminal nodes or leaves."
+
+label(strong_control_naive_tab) <- "tab:strong_control_naive"
+
+second_row <- paste(paste(names(strong_control_naive_tab0), collapse = " & "), "\\\\", collapse = "")
+first_row <- "&Data&\\multicolumn{2}{c}{Levels} &\\multicolumn{2}{c}{FWER} & Avg. Max &
+  \\multicolumn{2}{c}{Nodes} & \\multicolumn{2}{c}{Leaves}\\\\"
+
+align(strong_control_naive_tab) <- xalign(strong_control_naive_tab0)
+
+print(strong_control_naive_tab,
+  add.to.row = list(
+    pos = list(0, 0),
+    command = c(first_row, second_row)
+  ),
+  file = here("Paper", "strong_control_naive_tab.tex"),
+  include.rownames = FALSE,
+  include.colnames = FALSE,
+  booktabs = TRUE
+)
+
+
+### Start Here TODO
+##### Focus on what does control the FWER in a strong sense
+
+## The simple approach does have some cases with control and mostly requires data splitting.
+
+some_tau_naive %>%
+  filter(false_error < .05 + sim_se) %>%
+  arrange(k, l, prop_tau_nonzero)
+
+
+## there are multiple ways to control the FWER here and they don't look so different in power
+tmp <- some_tau_res %>%
+  filter(false_error <= .05 + sim_se & adj_effN == FALSE) %>%
   droplevels() %>%
-  group_by(alpha_fn, adj_effN, prop_tau_nonzero, local_adj_fn, final_adj_method) %>%
+  group_by(alpha_fn, prop_tau_nonzero, local_adj_fn, final_adj_method) %>%
   summarize(
     mean_fwer = mean(false_error),
     max_fwer = max(false_error),
-    mean_bottom_up_fwer = mean(bottom_up_false_error),
-    max_bottom_up_fwer = max(bottom_up_false_error),
+    #    mean_bottom_up_fwer = mean(bottom_up_false_error),
+    #    max_bottom_up_fwer = max(bottom_up_false_error),
     mean_power = mean(power),
     min_power = min(power),
     mean_leaf_power = mean(leaf_power),
     min_leaf_power = mean(leaf_power)
-  ) %>%
-  print(n = 200)
+  )
+
+print(tmp, n = 200)
+
+tmp %>% filter(final_adj_method == "fdr" & local_adj_fn == "local_unadj_all_ps" & alpha_fn == "fixed")
+tmp %>% filter(final_adj_method == "fwer" & local_adj_fn == "local_unadj_all_ps" & alpha_fn == "fixed")
+tmp %>% filter(final_adj_method == "none" & local_adj_fn == "local_unadj_all_ps" & alpha_fn == "fixed")
 
 ## We probably don't want to have both local_hommel plus conservative alpha
 ## adjustment at each step let alone plus final overall adjustment. Also use
 ## the data splitting approach.
 
 some_tau_res %>%
-  filter(local_adj_fn == "local_hommel_all_ps" &
-    !(alpha_fn %in% c("adaptive_k_adj", "fixed_k_adj")) & adj_effN & final_adj_method == "none") %>%
+  filter((local_adj_fn == "local_hommel_all_ps" & alpha_fn == "fixed") | (local_adj_fn != "local_hommel_all_ps" & alpha_fn != "fixed") &
+    adj_effN == TRUE) %>%
   group_by(alpha_fn, prop_tau_nonzero, local_adj_fn) %>%
   summarize(
     mean_fwer = mean(false_error),
@@ -237,8 +302,7 @@ some_tau_res %>%
 ## Allow uncontrolled FWER to learn where we see it
 
 strong_ctrl_res <- simp_simsres_latest %>%
-  filter(adj_effN == TRUE & local_adj_fn == "local_hommel_all_ps" &
-    (prop_tau_nonzero > 0 & prop_tau_nonzero < 1)) %>%
+  filter(adj_effN == TRUE & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1)) %>%
   as_tibble()
 
 ## Here we didn't get to test any leaves. The bottom up approach does 1024 tests with very low power
@@ -265,7 +329,7 @@ strong_ctrl_res %>%
 summary(strong_ctrl_res$num_nodes_tested)
 
 strong_ctrl_res %>%
-  filter(k == 6, l == 8) %>%
+  filter(k == 6, l == 6) %>%
   select(prop_tau_nonzero, false_error, power, num_nodes_tested, leaf_power, num_leaves, num_leaves_tested, bottom_up_false_error, bottom_up_power)
 
 strong_ctrl_res %>%
