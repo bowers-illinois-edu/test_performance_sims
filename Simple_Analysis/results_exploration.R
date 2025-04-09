@@ -2,7 +2,7 @@
 ## version without adjustment at each node.
 
 library(here)
-library(dplyr)
+library(tidyverse)
 library(dtplyr)
 library(data.table)
 library(conflicted)
@@ -247,11 +247,127 @@ print(strong_control_naive_tab,
 
 
 ### Start Here TODO
-##### Focus on what does control the FWER in a strong sense
+
+##### Focus on what does control the FWER in a strong sense. For now only
+### focusing on prop_tau_nonzero==.5 just to keep it simple.
+
+
+## Approaches that do control the FWER in the strong sense
+some_tau_control0 <- simp_simsres_latest %>%
+  filter(prop_tau_nonzero == .5 & false_error <= .05 + sim_se) %>%
+  select(-file & one_of(c("k", "l", "adj_effN", "alpha_fn", "local_adj_fn", "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char)))
+
+some_tau_control0
+
+## Focus first on single approaches
+with(some_tau_control0, table(alpha_fn, local_adj_fn, final_adj_method))
+
+## Try to focus on the application of single approaches
+some_tau_control1 <- some_tau_control0 %>%
+  filter((alpha_fn != "fixed" & final_adj_method == "none" & local_adj_fn == "local_unadj_all_ps") |
+    (alpha_fn == "fixed" & final_adj_method == "none" & local_adj_fn == "local_hommel_all_ps") |
+    (alpha_fn == "fixed" & final_adj_method != "none" & local_adj_fn == "local_unadj_all_ps"))
+
+some_tau_control1
+with(some_tau_control1, table(alpha_fn, local_adj_fn, final_adj_method))
+
+strong_control_tab0 <- some_tau_control1 %>%
+  group_by(k, adj_effN, alpha_fn, local_adj_fn, final_adj_method) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  arrange(adj_effN, k)
+
+## this next from stackoverflow
+df_transpose <- function(df) {
+  first_name <- colnames(df)[1]
+  temp <-
+    df %>%
+    tidyr::pivot_longer(-1) %>%
+    tidyr::pivot_wider(names_from = 1, values_from = value)
+  colnames(temp)[1] <- first_name
+  temp
+}
+
+## Look at the parts
+### One approach is to adjust all of the p-values at a given level (this is the local hommel approach)
+## tmp <- strong_control_tab0 %>%
+##   filter(adj_effN == TRUE & final_adj_method == "none" & alpha_fn == "fixed") %>%
+##   select(-adj_effN, -final_adj_method, -alpha_fn, -local_adj_fn, -max_power, -max_leaf_power) %>%
+##   df_transpose() %>%
+##   column_to_rownames(var = "k") %>%
+##   zapsmall() %>%
+##   select(`2`, `4`, `10`, `20`, `100`)
+## tmp
+
+local_hommel <- strong_control_tab0 %>%
+  filter(local_adj_fn == "local_hommel_all_ps" & adj_effN == TRUE) %>%
+  select(k, min_l, max_l, max_fwer, max_nodes_tested, min_leaf_power, max_leaves_tested, min_bottom_up_power, max_leaves) %>%
+  mutate(detected_leaves = min_bottom_up_power * (max_leaves * .5))
+local_hommel
+
+##   df_transpose() %>%
+##   column_to_rownames(var = "k") %>%
+##   zapsmall() %>%
+##   select(`2`, `4`, `10`, `20`, `100`)
+names(strong_control_tab0) <- c("$k$", "Splitting", "Min", "Max", "Min", "Max", "Tests", "Min", "Max", "Min", "Max")
+# strong_control_tab0[["Max Leaves"]] <- as.integer(strong_control_tab0[["Max Leaves"]])
+
+strong_control_tab <- xtable(strong_control_tab0, digits = 2)
+
+caption(strong_control_tab) <- "This table shows  lack of strong-control
+  of the family-wise error rate across 10,000 simulations for hypotheses using
+  $\\alpha=.05$ on $k$-ary trees with $k$ nodes per level where the hypothesis
+  of no effects is false for half of the leaves. Any ancestor of a leaf where
+  the null hypothesis of no effects is false is also false by construction.
+  Each row summarizes the results of simulations for the trees with a given $k$
+  and between min and max levels. Minimum and maximum average false positive
+  rates shown in the 'Min' and 'Max' FWER columns. The average maximum nodes
+  tested across the 10,000 simulatiosn are shown in 'Avg. Max Tests'. And
+  information about the range of trees is also shown: the total number of nodes
+  in the trees and the total number of terminal nodes or leaves."
+
+label(strong_control_tab) <- "tab:strong_control"
+
+second_row <- paste(paste(names(strong_control_tab0), collapse = " & "), "\\\\", collapse = "")
+first_row <- "&Data&\\multicolumn{2}{c}{Levels} &\\multicolumn{2}{c}{FWER} & Avg. Max &
+  \\multicolumn{2}{c}{Nodes} & \\multicolumn{2}{c}{Leaves}\\\\"
+
+align(strong_control_tab) <- xalign(strong_control_tab0)
+
+print(strong_control_tab,
+  add.to.row = list(
+    pos = list(0, 0),
+    command = c(first_row, second_row)
+  ),
+  file = here("Paper", "strong_control_tab.tex"),
+  include.rownames = FALSE,
+  include.colnames = FALSE,
+  booktabs = TRUE
+)
+
+
 
 ## The simple approach does have some cases with control and mostly requires data splitting.
 
-some_tau_naive %>%
+some_tau %>%
   filter(false_error < .05 + sim_se) %>%
   arrange(k, l, prop_tau_nonzero)
 
