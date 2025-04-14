@@ -363,6 +363,100 @@ global_approach_raw <- simp_simsres_latest %>%
 global_approach_raw %>% filter(false_error <= (.05 + sim_se))
 global_approach_raw %>% filter(false_error > (.05 + sim_se))
 
+global_control_tab0 <- global_approach_raw %>%
+  group_by(k, adj_effN, alpha_fn, local_adj_fn, final_adj_method) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  arrange(adj_effN, max_fwer, k)
+
+print(global_control_tab0, n = 100)
+
+
+hommel_raw <- simp_simsres_latest %>%
+  filter(final_adj_method == "none" & alpha_fn == "fixed" & prop_tau_nonzero > 0 & local_adj_fn == "local_hommel_all_ps" & adj_effN == TRUE) %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
+hommel_control_tab0 <- hommel_raw %>%
+  group_by(k, adj_effN, alpha_fn, local_adj_fn, final_adj_method) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  arrange(k)
+
+print(hommel_control_tab0, n = 100)
+# # A tibble: 12 × 22
+#        k adj_effN alpha_fn local_adj_fn        final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_leaf_power max_nodes_tested min_total_nodes max_total_nodes
+#    <int> <lgl>    <chr>    <chr>               <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>          <dbl>            <dbl>           <int>           <int>
+#  1     2 TRUE     fixed    local_hommel_all_ps none                 2    18        0   0.0538    NA        NA                  1              1             3.34               7          524287
+#  2     4 TRUE     fixed    local_hommel_all_ps none                 2     8        0   0.0342     0.730     0.749              1              1             3.20              21           87381
+#  3     6 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0424     0.739     0.751              1              1             3.10              43           55987
+#  4     8 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0391     0.732     0.741              1              1             3.11              73          299593
+#  5    10 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0459     0.741     0.747              1              1             3.08             111         1111111
+#  6    12 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0418     0.748     0.749              1              1             2.99             157           22621
+#  7    14 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0397     0.737     0.739              1              1             2.92             211           41371
+#  8    16 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0377     0.737     0.742              1              1             2.80             273           69905
+#  9    18 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0325     0.731     0.733              1              1             2.70             343          111151
+# 10    20 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0295     0.732     0.748              1              1             2.52             421          168421
+# 11    50 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0301     0.74      0.74               1              1             3.00            2551            2551
+# 12   100 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0451     0.739     0.739              1              1             4.41           10101           10101
+# # ℹ 6 more variables: min_leaves_tested <dbl>, max_leaves_tested <dbl>, min_leaves <int>, max_leaves <int>, min_bottom_up_power <dbl>, max_bottom_up_power <dbl>
+# # A tibble: 12 × 22
+#        k adj_effN alpha_fn local_adj_fn        final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_leaf_power max_nodes_tested min_total_nodes max_total_nodes
+#    <int> <lgl>    <chr>    <chr>               <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>          <dbl>            <dbl>           <int>           <int>
+#  1     2 TRUE     fixed    local_hommel_all_ps none                 2    18        0   0.0538    NA        NA                  1              1             3.34               7          524287
+#  2     4 TRUE     fixed    local_hommel_all_ps none                 2     8        0   0.0342     0.730     0.749              1              1             3.20              21           87381
+#  3     6 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0424     0.739     0.751              1              1             3.10              43           55987
+#  4     8 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0391     0.732     0.741              1              1             3.11              73          299593
+#  5    10 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0459     0.741     0.747              1              1             3.08             111         1111111
+#  6    12 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0418     0.748     0.749              1              1             2.99             157           22621
+#  7    14 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0397     0.737     0.739              1              1             2.92             211           41371
+#  8    16 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0377     0.737     0.742              1              1             2.80             273           69905
+#  9    18 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0325     0.731     0.733              1              1             2.70             343          111151
+# 10    20 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0295     0.732     0.748              1              1             2.52             421          168421
+# 11    50 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0301     0.74      0.74               1              1             3.00            2551            2551
+# 12   100 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0451     0.739     0.739              1              1             4.41           10101           10101
+# # ℹ 6 more variables: min_leaves_tested <dbl>, max_leaves_tested <dbl>, min_leaves <int>, max_leaves <int>, min_bottom_up_power <dbl>, max_bottom_up_power <dbl>
+
+
 ##   df_transpose() %>%
 ##   column_to_rownames(var = "k") %>%
 ##   zapsmall() %>%
