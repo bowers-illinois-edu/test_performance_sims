@@ -353,7 +353,7 @@ global_approach
 
 
 global_approach_raw <- simp_simsres_latest %>%
-  filter(final_adj_method != "none" & alpha_fn == "fixed" & prop_tau_nonzero > 0 & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
+  filter(final_adj_method != "none" & alpha_fn == "fixed" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
   select(-file & one_of(c(
     "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
     "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
@@ -364,7 +364,7 @@ global_approach_raw %>% filter(false_error <= (.05 + sim_se))
 global_approach_raw %>% filter(false_error > (.05 + sim_se))
 
 global_control_tab0 <- global_approach_raw %>%
-  group_by(k, adj_effN, alpha_fn, local_adj_fn, final_adj_method) %>%
+  group_by(k, final_adj_method) %>%
   summarize(
     min_l = min(l),
     max_l = max(l),
@@ -385,13 +385,56 @@ global_control_tab0 <- global_approach_raw %>%
     max_bottom_up_power = max(bottom_up_power)
   ) %>%
   ungroup() %>%
-  arrange(adj_effN, max_fwer, k)
+  select(-max_leaf_power) %>%
+  arrange(k)
 
 print(global_control_tab0, n = 100)
+# # A tibble: 24 × 18
+#        k final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_nodes_tested min_total_nodes max_total_nodes min_leaves_tested max_leaves_tested min_leaves max_leaves min_bottom_up_power max_bottom_up_power
+#    <int> <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>            <dbl>           <int>           <int>             <dbl>             <dbl>      <int>      <int>               <dbl>               <dbl>
+#  1     2 fdr                  2    18   0         0.069    NA        NA                  1             4.20               7          524287            0                  0.810          4     262144           NA                   NA
+#  2     2 fwer                 2    18   0         0.069    NA        NA                  1             4.20               7          524287            0                  0.810          4     262144           NA                   NA
+#  3     4 fdr                  2     8   0.0016    0.162     0.730     0.742              1             6.59              21           87381            0.0086             1.70          16      65536            0.000873             0.106
+#  4     4 fwer                 2     8   0.0016    0.162     0.730     0.742              1             6.59              21           87381            0.0086             1.70          16      65536            0.000873             0.106
+#  5     6 fdr                  2     6   0.0364    0.289     0.736     0.747              1            12.3               43           55987            0.346              2.70          36      46656            0.00102              0.0385
+#  6     6 fwer                 2     6   0.0364    0.289     0.736     0.747              1            12.3               43           55987            0.346              2.70          36      46656            0.00102              0.0385
+#  7     8 fdr                  2     6   0.0974    0.481     0.732     0.741              1            29.0               73          299593            0.954              7.94          64     262144            0.000437             0.0287
+#  8     8 fwer                 2     6   0.0974    0.481     0.732     0.741              1            29.0               73          299593            0.954              7.94          64     262144            0.000437             0.0287
+#  9    10 fdr                  2     6   0.124     0.622     0.741     0.746              1            66.2              111         1111111            1.48              26.3          100    1000000            0.000223             0.0226
+# 10    10 fwer                 2     4   0.124     0.622     0.741     0.746              1            32.9              111           11111            1.48              16.2          100      10000            0.00224              0.0226
+# 11    12 fdr                  2     4   0.166     0.680     0.74      0.748              1            52.3              157           22621            2.05              29.7          144      20736            0.00156              0.0188
+# 12    12 fwer                 2     6   0.166     0.680     0.737     0.748              1           140.               157         3257437            2.05              69.8          144    2985984            0.000129             0.0188
+# 13    14 fdr                  2     4   0.190     0.706     0.737     0.747              1            79.4              211           41371            2.61              49.8          196      38416            0.00114              0.0162
+# 14    14 fwer                 2     4   0.190     0.706     0.737     0.747              1            79.4              211           41371            2.61              49.8          196      38416            0.00114              0.0162
+# 15    16 fdr                  2     4   0.226     0.725     0.737     0.749              1           115.               273           69905            3.25              77.4          256      65536            0.000874             0.0142
+# 16    16 fwer                 2     4   0.226     0.725     0.737     0.749              1           115.               273           69905            3.25              77.4          256      65536            0.000874             0.0142
+# 17    18 fdr                  2     4   0.260     0.724     0.733     0.743              1           159.               343          111151            3.81             113.           324     104976            0.000689             0.0126
+# 18    18 fwer                 2     4   0.260     0.724     0.733     0.743              1           159.               343          111151            3.81             113.           324     104976            0.000689             0.0126
+# 19    20 fdr                  2     4   0.284     0.729     0.732     0.747              1           211.               421          168421            4.19             156.           400     160000            0.000558             0.0113
+# 20    20 fwer                 2     4   0.284     0.729     0.732     0.747              1           211.               421          168421            4.19             156.           400     160000            0.000558             0.0113
+# 21    50 fdr                  2     2   0.669     0.738     0.74      0.74               1            89.5             2551            2551           26.3               80.6         2500       2500            0.00442              0.00450
+# 22    50 fwer                 2     2   0.669     0.738     0.74      0.74               1            89.5             2551            2551           26.3               80.6         2500       2500            0.00442              0.00450
+# 23   100 fdr                  2     2   0.737     0.739     0.739     0.739              1           339.             10101           10101          105.               322.         10000      10000            0.00223              0.00225
+# 24   100 fwer                 2     2   0.737     0.739     0.739     0.739              1           339.             10101           10101          105.               322.         10000      10000            0.00223              0.00225
+# # A tibble: 24 × 18
+#        k final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_nodes_tested min_total_nodes max_total_nodes min_leaves_tested max_leaves_tested min_leaves max_leaves min_bottom_up_power max_bottom_up_power
+#    <int> <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>            <dbl>           <int>           <int>             <dbl>             <dbl>      <int>      <int>               <dbl>               <dbl>
+#  1     2 fdr                  2    18   0         0.069    NA        NA                  1             4.20               7          524287            0                  0.810          4     262144           NA                    NA
+#  2     2 fwer                 2    18   0         0.069    NA        NA                  1             4.20               7          524287            0                  0.810          4     262144           NA                    NA
+#  3     4 fdr                  2     8   0.0016    0.162     0.730     0.742              1             6.59              21           87381            0.0086             1.70          16      65536            0.000873              0.106
+#  4     4 fwer                 2     8   0.0016    0.162     0.730     0.742              1             6.59              21           87381            0.0086             1.70          16      65536            0.000873              0.106
+#  5     6 fdr                  2     6   0.0364    0.289     0.736     0.747              1            12.3               43           55987            0.346              2.70          36      46656            0.00102               0.0385
+#  6     6 fwer                 2     6   0.0364    0.289     0.736     0.747              1            12.3               43           55987            0.346              2.70          36      46656            0.00102               0.0385
+#  7     8 fdr                  2     6   0.0974    0.481     0.732     0.741              1            29.0               73          299593            0.954              7.94          64     262144            0.000437              0.0287
+#  8     8 fwer                 2     6   0.0974    0.481     0.732     0.741              1            29.0               73          299593            0.954              7.94          64     262144            0.000437              0.0287
+#  9    10 fdr                  2     6   0.124     0.622     0.741     0.746              1            66.2              111         1111111            1.48              26.3          100    1000000            0.000223              0.0226
+# 10    10 fwer                 2     4   0.124     0.622     0.741     0.746              1            32.9              111           11111            1.48              16.2          100      10000            0.00224               0.0226
+# # ℹ 14 more rows
+# # ℹ Use `print(n = ...)` to see more rows
 
 
 hommel_raw <- simp_simsres_latest %>%
-  filter(final_adj_method == "none" & alpha_fn == "fixed" & prop_tau_nonzero > 0 & local_adj_fn == "local_hommel_all_ps" & adj_effN == TRUE) %>%
+  filter(final_adj_method == "none" & alpha_fn == "fixed" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_hommel_all_ps" & adj_effN == TRUE) %>%
   select(-file & one_of(c(
     "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
     "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
@@ -399,7 +442,7 @@ hommel_raw <- simp_simsres_latest %>%
   arrange(false_error)
 
 hommel_control_tab0 <- hommel_raw %>%
-  group_by(k, adj_effN, alpha_fn, local_adj_fn, final_adj_method) %>%
+  group_by(k) %>%
   summarize(
     min_l = min(l),
     max_l = max(l),
@@ -422,41 +465,189 @@ hommel_control_tab0 <- hommel_raw %>%
   ungroup() %>%
   arrange(k)
 
-print(hommel_control_tab0, n = 100)
-# # A tibble: 12 × 22
-#        k adj_effN alpha_fn local_adj_fn        final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_leaf_power max_nodes_tested min_total_nodes max_total_nodes
-#    <int> <lgl>    <chr>    <chr>               <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>          <dbl>            <dbl>           <int>           <int>
-#  1     2 TRUE     fixed    local_hommel_all_ps none                 2    18        0   0.0538    NA        NA                  1              1             3.34               7          524287
-#  2     4 TRUE     fixed    local_hommel_all_ps none                 2     8        0   0.0342     0.730     0.749              1              1             3.20              21           87381
-#  3     6 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0424     0.739     0.751              1              1             3.10              43           55987
-#  4     8 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0391     0.732     0.741              1              1             3.11              73          299593
-#  5    10 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0459     0.741     0.747              1              1             3.08             111         1111111
-#  6    12 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0418     0.748     0.749              1              1             2.99             157           22621
-#  7    14 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0397     0.737     0.739              1              1             2.92             211           41371
-#  8    16 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0377     0.737     0.742              1              1             2.80             273           69905
-#  9    18 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0325     0.731     0.733              1              1             2.70             343          111151
-# 10    20 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0295     0.732     0.748              1              1             2.52             421          168421
-# 11    50 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0301     0.74      0.74               1              1             3.00            2551            2551
-# 12   100 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0451     0.739     0.739              1              1             4.41           10101           10101
-# # ℹ 6 more variables: min_leaves_tested <dbl>, max_leaves_tested <dbl>, min_leaves <int>, max_leaves <int>, min_bottom_up_power <dbl>, max_bottom_up_power <dbl>
-# # A tibble: 12 × 22
-#        k adj_effN alpha_fn local_adj_fn        final_adj_method min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_leaf_power max_nodes_tested min_total_nodes max_total_nodes
-#    <int> <lgl>    <chr>    <chr>               <chr>            <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>          <dbl>            <dbl>           <int>           <int>
-#  1     2 TRUE     fixed    local_hommel_all_ps none                 2    18        0   0.0538    NA        NA                  1              1             3.34               7          524287
-#  2     4 TRUE     fixed    local_hommel_all_ps none                 2     8        0   0.0342     0.730     0.749              1              1             3.20              21           87381
-#  3     6 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0424     0.739     0.751              1              1             3.10              43           55987
-#  4     8 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0391     0.732     0.741              1              1             3.11              73          299593
-#  5    10 TRUE     fixed    local_hommel_all_ps none                 2     6        0   0.0459     0.741     0.747              1              1             3.08             111         1111111
-#  6    12 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0418     0.748     0.749              1              1             2.99             157           22621
-#  7    14 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0397     0.737     0.739              1              1             2.92             211           41371
-#  8    16 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0377     0.737     0.742              1              1             2.80             273           69905
-#  9    18 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0325     0.731     0.733              1              1             2.70             343          111151
-# 10    20 TRUE     fixed    local_hommel_all_ps none                 2     4        0   0.0295     0.732     0.748              1              1             2.52             421          168421
-# 11    50 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0301     0.74      0.74               1              1             3.00            2551            2551
-# 12   100 TRUE     fixed    local_hommel_all_ps none                 2     2        0   0.0451     0.739     0.739              1              1             4.41           10101           10101
-# # ℹ 6 more variables: min_leaves_tested <dbl>, max_leaves_tested <dbl>, min_leaves <int>, max_leaves <int>, min_bottom_up_power <dbl>, max_bottom_up_power <dbl>
+print(hommel_control_tab0)
+# # A tibble: 12 × 18
+#        k min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_leaf_power max_nodes_tested min_total_nodes max_total_nodes min_leaves_tested max_leaves_tested min_leaves max_leaves min_bottom_up_power max_bottom_up_power
+#    <int> <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>          <dbl>            <dbl>           <int>           <int>             <dbl>             <dbl>      <int>      <int>               <dbl>               <dbl>
+#  1     2     2    18   0        0.0538    NA        NA                  1              1             3.32               7          524287            0                  0.686          4     262144           NA                   NA
+#  2     4     2     8   0        0.0342     0.730     0.749              1              1             3.08              21           87381            0                  0.834         16      65536            0.000877             0.106
+#  3     6     2     6   0        0.0424     0.739     0.751              1              1             3.02              43           55987            0                  0.696         36      46656            0.00102              0.0385
+#  4     8     2     6   0        0.0391     0.732     0.741              1              1             3.03              73          299593            0                  0.778         64     262144            0.000437             0.0287
+#  5    10     2     6   0        0.0459     0.741     0.747              1              1             2.99             111         1111111            0                  0.800        100    1000000            0.000224             0.0226
+#  6    12     2     4   0.0002   0.0418     0.748     0.749              1              1             2.91             157           22621            0.0017             0.804        144      20736            0.00155              0.0188
+#  7    14     2     4   0.0001   0.0397     0.737     0.739              1              1             2.83             211           41371            0.0016             0.810        196      38416            0.00113              0.0162
+#  8    16     2     4   0        0.0377     0.737     0.742              1              1             2.71             273           69905            0.0007             0.789        256      65536            0.000876             0.0142
+#  9    18     2     4   0        0.0325     0.731     0.733              1              1             2.61             343          111151            0.0005             0.769        324     104976            0.000693             0.0126
+# 10    20     2     4   0.0001   0.0295     0.732     0.748              1              1             2.44             421          168421            0.0008             0.694        400     160000            0.000556             0.0113
+# 11    50     2     2   0.0046   0.0301     0.74      0.74               1              1             2.88            2551            2551            0.150              1.12        2500       2500            0.00442              0.00450
+# 12   100     2     2   0.0069   0.0451     0.739     0.739              1              1             4.17           10101           10101            0.282              2.13       10000      10000            0.00223              0.00225
+
+alpha_adaptive_k_raw <- simp_simsres_latest %>%
+  filter(final_adj_method == "none" & alpha_fn == "adaptive_k_adj" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
+adaptive_k_control_tab0 <- alpha_adaptive_k_raw %>%
+  group_by(k) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  select(-max_leaf_power, -min_leaves_tested, -max_bottom_up_power) %>%
+  arrange(k)
+
+print(adaptive_k_control_tab0, n = 100)
+# # A tibble: 12 × 15
+#        k min_l max_l min_fwer max_fwer min_power max_power min_leaf_power max_nodes_tested min_total_nodes max_total_nodes max_leaves_tested min_leaves max_leaves min_bottom_up_power
+#    <int> <int> <int>    <dbl>    <dbl>     <dbl>     <dbl>          <dbl>            <dbl>           <int>           <int>             <dbl>      <int>      <int>               <dbl>
+#  1     2     2    18   0        0.0502    NA        NA              0.776             3.77               7          524287             0.678          4     262144           NA
+#  2     4     2     8   0.0008   0.0422     0.727     0.750          0.945             3.78              21           87381             0.866         16      65536            0.000876
+#  3     6     2     6   0.0026   0.0628     0.739     0.750          0.993             4.03              43           55987             0.867         36      46656            0.00103
+#  4     8     2     6   0.0029   0.0734     0.732     0.738          0.991             4.61              73          299593             1.08          64     262144            0.000436
+#  5    10     2     6   0.0069   0.0891     0.735     0.741          0.997             5.31             111         1111111             1.23         100    1000000            0.000223
+#  6    12     2     4   0.0115   0.0907     0.748     0.750          0.998             5.19             157           22621             1.35         144      20736            0.00155
+#  7    14     2     4   0.0141   0.09       0.737     0.743          0.999             5.49             211           41371             1.38         196      38416            0.00113
+#  8    16     2     4   0.0159   0.098      0.737     0.744          1.00              5.46             273           69905             1.45         256      65536            0.000869
+#  9    18     2     4   0.0156   0.0975     0.733     0.742          0.999             5.64             343          111151             1.50         324     104976            0.000692
+# 10    20     2     4   0.0163   0.104      0.732     0.739          0.999             5.83             421          168421             1.70         400     160000            0.000560
+# 11    50     2     2   0.0322   0.154      0.74      0.74           1.00              5.43            2551            2551             3.27        2500       2500            0.00442
+# 12   100     2     2   0.0627   0.222      0.739     0.739          1                10.6            10101           10101             7.97       10000      10000            0.00223
+
+table(simp_simsres_latest$alpha_fn)
+#
+# adaptive_k_adj          fixed    fixed_k_adj      investing       spending
+#           1996           2022           2003           1982           1993
 
 
+fixed_k_raw <- simp_simsres_latest %>%
+  filter(final_adj_method == "none" & alpha_fn == "fixed_k_adj" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
+fixed_k_control_tab0 <- fixed_k_raw %>%
+  group_by(k) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  select(-max_leaf_power, -min_leaves_tested, -max_bottom_up_power) %>%
+  arrange(k)
+
+print(fixed_k_control_tab0, n = 100)
+
+investing_raw <- simp_simsres_latest %>%
+  filter(final_adj_method == "none" & alpha_fn == "investing" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
+investing_control_tab0 <- investing_raw %>%
+  group_by(k) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  select(-max_leaf_power, -min_leaves_tested, -max_bottom_up_power) %>%
+  arrange(k)
+
+print(investing_control_tab0, n = 100)
+
+
+
+spending_raw <- simp_simsres_latest %>%
+  filter(final_adj_method == "none" & alpha_fn == "spending" & (prop_tau_nonzero > 0 & prop_tau_nonzero < 1) & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
+spending_control_tab0 <- spending_raw %>%
+  group_by(k) %>%
+  summarize(
+    min_l = min(l),
+    max_l = max(l),
+    min_fwer = min(false_error),
+    max_fwer = max(false_error),
+    min_power = min(power),
+    max_power = max(power),
+    min_leaf_power = min(leaf_power, na.rm = TRUE),
+    max_leaf_power = max(leaf_power, na.rm = TRUE),
+    max_nodes_tested = max(num_nodes_tested),
+    min_total_nodes = min(total_nodes),
+    max_total_nodes = max(total_nodes),
+    min_leaves_tested = min(num_leaves_tested),
+    max_leaves_tested = max(num_leaves_tested),
+    min_leaves = as.integer(min(num_leaves)),
+    max_leaves = as.integer(max(num_leaves)),
+    min_bottom_up_power = min(bottom_up_power),
+    max_bottom_up_power = max(bottom_up_power)
+  ) %>%
+  ungroup() %>%
+  select(-max_leaf_power, -min_leaves_tested, -max_bottom_up_power) %>%
+  arrange(k)
+
+print(spending_control_tab0, n = 100)
+
+## TODO: Question is whether hommel + spending or investing etc.. has more power.
+
+##### OLD STUFF BELOW
 ##   df_transpose() %>%
 ##   column_to_rownames(var = "k") %>%
 ##   zapsmall() %>%
