@@ -352,14 +352,16 @@ global_approach <- strong_control_tab0 %>%
 global_approach
 
 
-simp_simsres_latest %>%
-  filter(final_adj_method != "none" & alpha_fn == "fixed") %>%
+global_approach_raw <- simp_simsres_latest %>%
+  filter(final_adj_method != "none" & alpha_fn == "fixed" & prop_tau_nonzero > 0 & local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE) %>%
   select(-file & one_of(c(
     "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
     "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
   ))) %>%
   arrange(false_error)
 
+global_approach_raw %>% filter(false_error <= (.05 + sim_se))
+global_approach_raw %>% filter(false_error > (.05 + sim_se))
 
 ##   df_transpose() %>%
 ##   column_to_rownames(var = "k") %>%
