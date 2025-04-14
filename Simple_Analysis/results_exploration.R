@@ -254,7 +254,7 @@ print(strong_control_naive_tab,
 
 ## Approaches that do control the FWER in the strong sense
 some_tau_control0 <- simp_simsres_latest %>%
-  filter(prop_tau_nonzero == .5 & false_error <= .05 + sim_se) %>%
+  filter(prop_tau_nonzero == .5 & false_error <= (.05 + sim_se)) %>%
   select(-file & one_of(c("k", "l", "adj_effN", "alpha_fn", "local_adj_fn", "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char)))
 
 some_tau_control0
@@ -296,15 +296,15 @@ strong_control_tab0 <- some_tau_control1 %>%
   arrange(adj_effN, k)
 
 ## this next from stackoverflow
-df_transpose <- function(df) {
-  first_name <- colnames(df)[1]
-  temp <-
-    df %>%
-    tidyr::pivot_longer(-1) %>%
-    tidyr::pivot_wider(names_from = 1, values_from = value)
-  colnames(temp)[1] <- first_name
-  temp
-}
+## df_transpose <- function(df) {
+##   first_name <- colnames(df)[1]
+##   temp <-
+##     df %>%
+##     tidyr::pivot_longer(-1) %>%
+##     tidyr::pivot_wider(names_from = 1, values_from = value)
+##   colnames(temp)[1] <- first_name
+##   return(temp)
+## }
 
 ## Look at the parts
 ### One approach is to adjust all of the p-values at a given level (this is the local hommel approach)
@@ -319,9 +319,47 @@ df_transpose <- function(df) {
 
 local_hommel <- strong_control_tab0 %>%
   filter(local_adj_fn == "local_hommel_all_ps" & adj_effN == TRUE) %>%
-  select(k, min_l, max_l, max_fwer, max_nodes_tested, min_leaf_power, max_leaves_tested, min_bottom_up_power, max_leaves) %>%
-  mutate(detected_leaves = min_bottom_up_power * (max_leaves * .5))
+  select(
+    k, min_l, max_l, max_fwer, min_power, max_nodes_tested, min_leaf_power,
+    max_leaves_tested, min_bottom_up_power, max_leaves # , alpha_fn
+  ) %>%
+  mutate(bottom_up_detected_leaves = min_bottom_up_power * (max_leaves * .5))
 local_hommel
+# # A tibble: 12 × 11
+#        k min_l max_l max_fwer min_power max_nodes_tested min_leaf_power max_leaves_tested min_bottom_up_power max_leaves detected_leaves
+#    <int> <int> <int>    <dbl>     <dbl>            <dbl>          <dbl>             <dbl>               <dbl>      <int>           <dbl>
+#  1     2     2    18   0.0327     0.738             3.29              1             0.478            0.000437     262144           57.3
+#  2     4     2     8   0.0317     0.730             2.91              1             0.451            0.000877      65536           28.7
+#  3     6     2     6   0.0346     0.739             2.73              1             0.412            0.00104       46656           24.2
+#  4     8     2     6   0.0317     0.732             2.70              1             0.455            0.000437     262144           57.3
+#  5    10     2     6   0.0296     0.741             2.64              1             0.454            0.000224    1000000          112.
+#  6    12     2     4   0.027      0.748             2.56              1             0.456            0.00156       20736           16.1
+#  7    14     2     4   0.0269     0.737             2.49              1             0.467            0.00114       38416           21.9
+#  8    16     2     4   0.0251     0.737             2.37              1             0.450            0.000876      65536           28.7
+#  9    18     2     4   0.0189     0.731             2.28              1             0.438            0.000693     104976           36.4
+# 10    20     2     4   0.0177     0.732             2.14              1             0.389            0.000558     160000           44.7
+# 11    50     2     2   0.0175     0.74              2.39              1             0.630            0.00450        2500            5.62
+# 12   100     2     2   0.0269     0.739             3.25              1             1.21             0.00225       10000           11.3
+
+
+global_approach <- strong_control_tab0 %>%
+  filter(local_adj_fn == "local_unadj_all_ps" & adj_effN == TRUE & final_adj_method != "none" & alpha_fn == "fixed") %>%
+  select(
+    final_adj_method, k, min_l, max_l, max_fwer, min_power, max_nodes_tested, min_leaf_power,
+    max_leaves_tested, min_bottom_up_power, max_leaves
+  ) %>%
+  mutate(bottom_up_detected_leaves = min_bottom_up_power * (max_leaves * .5))
+global_approach
+
+
+simp_simsres_latest %>%
+  filter(final_adj_method != "none" & alpha_fn == "fixed") %>%
+  select(-file & one_of(c(
+    "k", "l", "adj_effN", "alpha_fn", "local_adj_fn",
+    "final_adj_method", "total_nodes", "num_leaves", "prop_tau_nonzero", "bottom_up_power", key_char
+  ))) %>%
+  arrange(false_error)
+
 
 ##   df_transpose() %>%
 ##   column_to_rownames(var = "k") %>%
