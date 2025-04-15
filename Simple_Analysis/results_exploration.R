@@ -102,15 +102,16 @@ names(weak_control_sim_tab0) <- c("$k$", "Min", "Max", "FWER", "Tests", "Min", "
 
 weak_control_sim_tab <- xtable(weak_control_sim_tab0, digits = 3)
 
-caption(weak_control_sim_tab) <- "This table show weak-control of the
-  family-wise error rate across 10,000 simulations for hypotheses using
-  $\\alpha=.05$ on $k$-ary trees with $k$ nodes per level where the hypothesis
-  of no effects is true for all nodes. Each row summarizes the results of
-  simulations for the trees with a given $k$ and between min and max levels.
-  Maximum average false positive rates shown in the 'Max FWER' column. The
-  maximum nodes tested are shown in 'Max Tests'. And information about the
-  range of trees is also shown: the total number of nodes in the trees and the
-  total number of terminal nodes or leaves."
+caption(weak_control_sim_tab) <- "This table shows weak-control of the
+  family-wise error rate across 10,000 simulations using $\\alpha=.05$ on
+  $k$-ary trees with $k$ nodes per level where the hypothesis of no effects is
+  true for all nodes. Each row summarizes the results of simulations for the
+  trees with a given $k$ and between the minimum and maximum number of levels
+  for that number of nodes per level. Maximum average false positive rates are
+  shown in the 'Max FWER' column. The maximum number of nodes tested are shown
+  in 'Max Tests'. And information about the range of trees is also shown: the
+  total number of nodes in the trees and the total number of terminal nodes or
+  leaves."
 
 label(weak_control_sim_tab) <- "tab:weak_control_sim"
 

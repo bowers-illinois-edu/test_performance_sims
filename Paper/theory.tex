@@ -1,4 +1,5 @@
 \documentclass[11pt]{article}
+
 \usepackage{amssymb,amsmath,lscape,amsthm}
 \usepackage[ruled]{algorithm2e}
 \usepackage[T1]{fontenc}
@@ -14,6 +15,7 @@
 \hypersetup{pdfborder={0 0 0},
             breaklinks=true}
 
+\usepackage[dvipsnames]{xcolor}
 \usepackage[margin=1.5in]{geometry}
 \usepackage{graphicx,grffile}
 \usepackage{float} % for the H option
@@ -43,7 +45,7 @@
 \title{Why does the top-down tree-shaped hypothesis testing procedure control family wise error rates?}
 \providecommand{\subtitle}[1]{}
 \subtitle{Draft. Do not circulate or cite without permission. Comments welcome.}
-\author{Jake Bowers and David Kim}
+\author{Jake Bowers and David Kim and \ldots}
 \date{\today}
 
 % For tables
@@ -102,6 +104,30 @@
 %\usepackage{todonotes}
 \definechangesauthor{JB}
 
+\usepackage{listings}
+\lstset{
+  language=R,                     % the language of the code
+  basicstyle=\normalsize\ttfamily, % the size of the fonts that are used for the code
+  numbers=left,                   % where to put the line-numbers
+  numberstyle=\tiny\color{NavyBlue},  % the style that is used for the line-numbers
+  stepnumber=1,                   % the step between two line-numbers. If it is 1, each line
+                                  % will be numbered
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=single,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  keywordstyle=\color{NavyBlue},      % keyword style
+  commentstyle=\color{OliveGreen},   % comment style
+  stringstyle=\color{OliveGreen}      % string literal style
+}
+
 
 \tikzcdset{arrow style=tikz, diagrams={>=stealth}}
 
@@ -111,7 +137,8 @@
 \begin{document}
 \maketitle
 
-This section explains the theory behind the method.
+This section explains the theory behind the method and shows simulation results
+that illustrate the theory.
 
 \section{Recap of the method and notation}
 
@@ -190,8 +217,9 @@ $\bset_{1}$).
 
 We list here all of the rules needed for both weak and strong control of the FWER.
 
-\paragraph*{Rules required for weak control of the FWER} We will show below
-that the following three rules suffice for weak control of the FWER.
+\paragraph*{Rules sufficient for weak control of the FWER} We will show below
+that the following three rules suffice for weak control of the FWER. Notice
+that these rules do not involve data splitting.
 
 \begin{description}
 
@@ -207,26 +235,28 @@ that the following three rules suffice for weak control of the FWER.
 
 \item[The \textbf{monotonicity rule}] tells us that even if all ancestor
   hypotheses have been rejected, the critical value ($\alpha$) at which we
-  reject a given hypothesis must be less than or equal to the critical value
-  used in rejecting the ancestor hypotheses. In practice, with $\alpha$ fixed,
-  following this rule amounts to a restriction that $p$-values never decrease
-    along a path.(This is like the \textcite{goeman2010sequential}
-  ``monotonicity'' assumption).
+    reject a given hypothesis must be less than or equal to the critical value
+    used in rejecting the ancestor hypotheses. In practice, with $\alpha$
+    fixed, following this rule amounts to a restriction that $p$-values never
+    decrease along a path.(This is like the \textcite{goeman2010sequential}
+    ``monotonicity'' assumption). This rule reduces the power of tests as the
+    tests descend the tree.
 
 
 \item[The \textbf{false positive rate rule}]  In the case of fixed $\alpha$ we
-  require that all tests, if executed on their own, have a false positive rate
-  no more than $\alpha$. We can tend to justify this assumption because we
-  could use direct permutations of randomized assignment to calculate these
-  $p$-values, and this process plus our test statistic (which is effect
-  increasing) should yield this kind of control \autocite[section
-  TODO]{rosenbaum2002book}. (This is like the \textcite{goeman2010sequential}
-  "single-step" assumption).
+  require that all tests at individual nodes, if executed on their own, have a
+    false positive rate no more than $\alpha$. We can tend to justify this
+    assumption because we could use direct permutations of randomized
+    assignment to calculate these $p$-values, and this process plus our test
+    statistic (which is effect increasing) should yield this kind of control
+    \autocite[section TODO]{rosenbaum2002book}. (This is like the
+    \textcite{goeman2010sequential} "single-step" assumption).
 
 \end{description}
 
 \paragraph*{Additional rules required for strong control of the FWER}
-We then show that strong control of the FWER requires two more rules.
+
+We then show that strong control of the FWER requires one or more of the following rules. \textbf{This is work in progress}
 
 \begin{description}
 
@@ -248,10 +278,14 @@ We then show that strong control of the FWER requires two more rules.
     number of nodes in a complete $k$-ary tree is $(k^{l+1}-1)/(k-1)$ and the
     maximum number of levels in a tree with $k$ nodes at each level with $B$
     total nodes is $l = \left\lfloor \log_k \left( B (k - 1) + 1 \right)
-    \right\rfloor - 1$.} This rule not necessary for control of the FWER in the
-    weak sense --- it is not used in the proof below and we can show that
-    simulation studies without sample splitting also control the FWER when all
-    hypotheses are true.
+    \right\rfloor - 1$.}
+
+    We speculate that one can control the FWER in a strong sense (with non
+    trivial power) without data splitting, say, if the aim is to understand the
+    contributions of a given test item to an overall score. But we focus on our
+    specific case of block randomized experiments here, in which data splitting
+    is an inherent part of detecting effects in subsets of and/or individual
+    experimental blocks.
 
   \item[The \textbf{local adjustment rule}] When some nodes have non-null
     effects (or are ancestors of leaves with non-null effects) then the gating
@@ -261,19 +295,30 @@ We then show that strong control of the FWER requires two more rules.
     rules. Instead we can make an adjustment to the tests within each parent.
     So, in the above figure, we would make an adjustment for testing both
     $\hyp{1}$ and $\hyp{2}$, and then separately we would adjust  the
-    $p$-values arising from the two tests of $\hyp{3}$ and $\hyp{4}$ separately
-    from the two tests of $\hyp{5}$ and $\hyp{6}$. In our application we use
-    the Hommel adjustment but one could also use a more conservative
-    adjustment.\footnote{We think that this adjustment is conservative. We
-    leave for another project the derivation of the optimal local adjustment.}
+    $p$-values arising from the two tests of $\hyp{3}$ and $\hyp{4}$ and again
+    the two tests of $\hyp{5}$ and $\hyp{6}$. In our application we use the
+    Hommel adjustment for each of the $k$ hypotheses at a given level but one
+    could also use a more conservative adjustment.\footnote{We think that this
+    adjustment is conservative. We leave for another project the derivation of
+    the optimal local adjustment. In what follows we compare the Hommel
+    adjustment for $p$-values across $k$ hypotheses to approaches that directly
+    adjust the $\alpha$ level for the hypotheses at a given level.}
 
   \item[Optional rule: the \textbf{global adjustment rule}] It is possible that
-    we can skip the local adjustment rule and just do a global adjustment after
-    all of the nodes have been tested following the other rules. We may leave
-    this rule for a different paper but we explored it in the simulations that
-    we show below.
+    we can skip the local adjustment rule and just do a global adjustment FWER
+    or even FDR adjustment for the $p$-values that are less than or equal to
+    $\alpha$ in the tree after all of the nodes have been tested following the
+    other rules. We may leave this rule for a different paper but we explored
+    it in the simulations that we show below.\footnote{TODO: Check that when we
+    do this the results respect the rules. For example, that monotonicity and
+    gating are respected.}
 
 \end{description}
+
+We also speculate that we can increase power while still controlling the FWER
+by combining these rules with approaches that "invest" or "spend" false
+positive error by adjusting the rejection threshold, $\alpha$, for the child
+nodes or a given parent.
 
 \section{Weak Control of the FWER using the rules}
 
@@ -311,8 +356,8 @@ indices, or other multi-item scores.
 
   \paragraph*{Step 2. Consequence of the stopping rule.}
 
-  Because of the stopping rule, a hypothesis node at any level is tested only
-  if all its ancestor hypotheses had $p$-values $\le \alpha$. This means that,
+  Because of the stopping rule, a hypothesis at any level is tested only
+  if all its ancestor hypotheses had $p$-values $\le \alpha$. This means that
   the event that any node in the tree is tested is a subset of the event of a
   false rejection at the root node, $\{p_0 \le \alpha\}$. Write the event
   of at least one false rejection on the tree as as $E$. The stopping rule
@@ -358,11 +403,11 @@ indices, or other multi-item scores.
   number of nodes to a leaf. At the first level, for a given child, $\hyp{1}$,
   with parent’s p-value $p_0$, its conditional probability of being falsely
   rejected is $\Pr(p_{1} \le \alpha \mid p_0) = \frac{\alpha-p_0}{1-p_0} \le
-  \alpha$.  We can write this probability as that fraction, because $p_0 \le
-  \alpha$ and because the \textbf{false positive rule} implies that all of the
+  \alpha$.  We can write this probability as that fraction, because (1) $p_0
+  \le \alpha$, (2) the \textbf{false positive rule} implies that all of the
   p-values in this tree of true null hypotheses are draws from a uniform
-  distribution between the parent p-values (by the \textbf{monotonicity rule})
-  and 1.
+  distribution, and (3)  the \textbf{monotonicity rule} requires that $p_1 \ge
+  p_0$.
 
   Similarly, for a node at level 2 along that branch, its test is only
   performed if the level 1 node was rejected. By the same logic, for example,
@@ -370,23 +415,9 @@ indices, or other multi-item scores.
   p_1 \le \alpha) \le \alpha$, and so on.
 
   Thus, for any given branch, the probability that all tests along that branch
-  yield rejections is at most the product of probabilities at each level and
-  since the probabilities are all less than $\alpha$, the product is less than
-  $\alpha$.
-
-\paragraph*{An alternative approach:}
-
-Consider a tree with two levels and $k$ nodes per level. In this case we have
-$p_0$ (at the root or first level) and then $p_1, \ldots, p_k$ at the second
-level. What is the probability of making at least one false positive error
-among these tests?
-
-We might write this as $\Pr(\min(p_0,p_1,\ldots,p_k) \le \alpha)$. By the
-\textbf{false positive rule} we know that $\Pr(p_0 \le \alpha) \le \alpha$. By
-the \textbf{monotonicity rule} and \textbf{stopping rule} we know that
-$\min(p_0,p_1,\ldots,p_k) = p_0$. So, $\Pr(\min(p_0,p_1,\ldots,p_k) \le
-\alpha)=\Pr(p_0 \le alpha) \le \alpha$.
-
+  yield rejections is at most the product of probabilities on the branch up to
+  that point and since the probabilities are all less than $\alpha$, the
+  product is (much) less than $\alpha$.
 
   \paragraph*{Conclusion}
 
@@ -408,6 +439,20 @@ $\min(p_0,p_1,\ldots,p_k) = p_0$. So, $\Pr(\min(p_0,p_1,\ldots,p_k) \le
   Thus, the entire procedure controls the FWER at level $\alpha$ under the
   complete null hypothesis.
 
+\paragraph*{An alternative approach:}
+
+Consider a tree with two levels and $k$ nodes per level. In this case we have
+$p_0$ (at the root or first level) and then $p_1, \ldots, p_k$ at the second
+level. What is the probability of making at least one false positive error
+among these tests?
+
+We might write this as $\Pr(\min(p_0,p_1,\ldots,p_k) \le \alpha)$. By the
+\textbf{false positive rule} we know that $\Pr(p_0 \le \alpha) \le \alpha$. By
+the \textbf{monotonicity rule} and \textbf{stopping rule} we know that
+$\min(p_0,p_1,\ldots,p_k) = p_0$. So, $\Pr(\min(p_0,p_1,\ldots,p_k) \le
+\alpha)=\Pr(p_0 \le alpha) \le \alpha$.
+
+
 \end{proof}
 
 \textbf{To Notice:} Although we described the procedure using the idea of data
@@ -417,28 +462,52 @@ splitting, this was not necessary in the proof.
 
 We created a simple simulation study to illustrate this logic.
 
-Given a specification of a complete $k$-ary tree using $k$ nodes per level and
-$l$ levels we drew $p$-values from a uniform distribution following the rules:
-For the root node, $p_0 \sim U(0,1)$; a draw which respects the \textbf{false
-positive rule} such that $\Pr(p_0 \le \alpha) <= \alpha$ in this case. If $p_0
-\le \alpha$, we drew $p_{l=1,k}$ independent $p$-values from $U(p_0,1)$
-(implementing the \textbf{monotonicity rule}) otherwise we stopped testing. For
-any of the $k$ $p$-values at level 1 where $p_{l=1,k} \le \alpha$, we generated
-$p$-values for its children with $U(p_{\text{parent $p$}},1)$, implementing the
-\textbf{stopping rule} as we descended into the tree towards the leaves. In
-this simulation we did not change the power of the test (i.e. representing the
-idea of data splitting) other than to enforce the \textbf{stopping rule} and
-\textbf{monotonicity rule}. For each tree, we repeated this procedure 10,000
-times, recording whether any of the $p$-values in the tree of true null
-hypotheses were $\le \alpha$. The proportion of simulations with at least one
-such false rejection is a measure of the FWER.
+\paragraph*{Details of the simulation study}
 
+Given a specification of a complete $k$-ary tree using $k$ nodes per level and
+$L$ levels we drew $p$-values from uniform distributions following the rules:
+\begin{enumerate}
+
+  \item For the root node, $p_0 \sim U(0,1)$; a draw which respects the
+    \textbf{false positive rule} such that $\Pr(p_0 \le \alpha) \le \alpha$ in
+    this case.
+
+    \item If $p_0 \le \alpha$, we drew $p_{l=1,k}$ independent $p$-values from
+      $U(p_0,1)$ (implementing the \textbf{monotonicity rule}) otherwise we
+      stopped testing.
+
+    \item For any of the $k$ $p$-values at level 1 where $p_{l=1,k} \le
+      \alpha$, we generated $p$-values for its children with $U(p_{\text{parent
+      $p$}},1)$, implementing the \textbf{stopping rule}.
+
+    \item We then continued testing, drawing from uniform distributions with
+      lower bounds equal to the parent $p$-values for parents with $p \le
+      \alpha$ as we descended into the tree towards the leaves, stopping
+      testing in any branch when $p > \alpha$
+
+\end{enumerate}
+
+In this simulation we did not change the power of the test (i.e. representing
+the idea of data splitting) other than to enforce the \textbf{stopping rule}
+and \textbf{monotonicity rule}.
+
+For each tree, we repeated this procedure 10,000 times, recording whether any
+of the $p$-values in the tree of true null hypotheses were $\le \alpha$. The
+proportion of simulations with at least one such false rejection is a measure
+of the FWER.
+
+\paragraph*{Weak FWER Control Simulation Results}
 % see Simple_analysis/results_exploration.R
 Table~\ref{tab:weak_control_sim} shows the results. Whether the tree has 2
-nodes per level or 100, the rules lead to maximum FWER that are within
-simulation error (with 10,000 simulations a rough measure of simulation error
-is $2 \times \sqrt{.05 (1-.05)/10000}$ so we would expect results as large as
-$.05 +.004 = .054$ given the variability arising from simulation).
+nodes per level or 100, the rules lead to a maximum FWER within simulation
+error. We calculate simulation error, with 10,000 simulations a rough measure
+of simulation error is $2 \times \sqrt{.05 (1-.05)/10000}$ so we would expect
+results as large as $.05 +.004 = .054$ given the variability arising from
+simulation (We could also have chosen $2 \times \sqrt{.5 (1-.5)/10000}=.01$
+with an upper bound of $.05+.01=.06$. TODO. Not sure which to choose.) Each
+tree with $k$ nodes per level and a maximum of $L$ levels, starts with a single
+root node and then has $k$ nodes at level 1, $k^2$ at level 2, and $k^L$ leaves
+or terminal nodes.
 
 \input{weak_control_sim_tab.tex}
 
@@ -448,54 +517,113 @@ simulations). This is true even when the trees have many nodes and many leaves.
 In contrast the bottom-up procedure would test in each of the leaves and then
 adjust the results of all of those tests. In this table we see that the
 bottom-up procedure would be required to do thousands of tests: its FWER would
-be controlled (not shown here) and we will show later when the power of the
-tests are relevant, this requirement to do so many tests makes the bottom-up
-approach very unlikely to detect effects when they exist.
+be controlled (not shown here). Power is not relevant in this case --- where
+the null hypothesis of no effects is true for all nodes. We will show later,
+when the hypothesis of no effects is false for some nodes, the requirement that
+the bottom-up approach test each leaf severely reduces its power to detect any
+effects at all.
 
 \paragraph*{Why might weak control suffice?}
 
-In many exploratory research scenarios the goal is to identify candidates for
+In many exploratory research scenarios analysts want to identify candidates for
 future follow-up studies. Since strong control of the FWER tends to have lower
 power than weak control, a researcher may prefer to only apply the three rules
 that we describe under the idea that more true effects might be detected in
-exchange for a slightly elevated risk of flagging false effects. In the case of
-the tree-organized hypotheses, the risk is a function of the number of nodes at
+exchange for a slightly elevated risk of flagging false effects (since, as we
+will show below, the three rules do not suffice in all cases to control the
+FWER when some nodes contain non-null effects). In the case of the
+tree-organized hypotheses, the risk is a function of the number of nodes at
 each level of the tree $k$ and the number of levels of the tree $l$ as well as
 the proportion of the leaves of the tree with non-null effects or false
 hypotheses.
 
-TODO: can we / should we sketch a function that relates them? Such that, say, with very
-large $k$ and $l$ we might have a severely uncontrolled FWER but with smaller
-trees the trade-off might be worthwhile?
-
 
 \section{Strong control of the FWER: More Rules}
+
+\textbf{This section is in progress}
 
 The three rules that allow control of the FWER in a weak sense do not control
 it in a strong sense. For example, Table~\ref{tab:strong_control_naive} shows
 the situation where half of the leaves of each tree have non-null causal
-effects. All of the ancestors of a leaf with a non-null effect is defined to
-also contain a non-null effect (alterantively to be a node for which the null
-hypothesis of no effects is false). Whenever the null hypothesis of no effects
-is false for any leaf of a tree it is also false for the root of the tree and
-for all nodes on the path between the root and that leaf. This table shows that
+effects. By definition, if a leaf has a non-null effect, all its ancesters also
+contain a non-null effect. An ideal hypothesis testing procedure should reject
+the null of no effects for that leaf and all of its ancestors. This dependency
+also means that whenever the null hypothesis of no effects is false for any
+leaf of a tree it is also false for the root of the tree and for all nodes on
+the path between the root and that leaf.
+
+Our simulation procedure to assess strong control of the FWER differed from the
+simulation described above in regards the construction of the $p$-values by
+using a Beta distribution for non-null nodes in the tree to simulate a
+relatively high powered test, by simulating data-splitting by adjusting one of
+the Beta shape parameters, and by implementing different modes of adjustment
+for the rejection thresholds (the $\alpha$) or the $p$-values.
+
+\begin{enumerate}
+
+  \item \textbf{Simulating high powered tests for non-null nodes}  Like the
+    above simulations, we drew $p$-values from $\text{U}(p_\text{parent},1)$
+    for nodes with no effects (the null is true).
+
+
+    Since this tree has some nodes containing non-null effects, we draw
+    $p$-values from a Beta distribution rescaled to go from $p_\text{parent}$
+    as a lower limit to $1$ as an upper-limit for those non-null nodes: drawing
+    one value from $p^*_{\text{non-null}} \sim \text{Beta}(a,1)$ and then
+    rescaling to produce $p_{l,k}=p_\text{parent} + (1-p_\text{parent}) \cdot
+    p^*_{\text{non-null}}$.
+
+    In our simulations we set $a=.1$ as the first shape parameter of the Beta
+    distribution to simulate a reasonably powerful test: a Beta distribution
+    with $a=.1$ and $b=1$ will produce about 74\% of $p$-values less than .05
+    (in R code we can see this with \lstinline[language=R]{pbeta(.05,.1,1)=.74}.
+    For the root node, $p_\text{parent}=0$.
+
+  \item \textbf{Simulating data-splitting} We simulated the idea of
+    data-splitting by increasing the parameter of the beta distribution
+    governing the production of $p$-values for nodes where the null hypothesis
+    of no effects was false. First we set a value for the total number of
+    blocks $N$. At level 0, we used $a=.1$. We then increased $a$ for each
+    level of the tree, simulating the idea that the total number of units used
+    by a parent node is divided equally by the number of child nodes. So, where
+    as we would have $N$ available to produce $p_0$, if we have a tree with
+    $k=4$, we would have $N/4$ available to test each of $p_1,\ldots,p_4$. For
+    example, if $a=.2$, then \lstinline[language=R]{pbeta(.05,.2,1)=.55}.  We
+    set a lower limit on the power such that we never increased $a$ over $.5$
+    ($a=.5$ is equivalent to power $\approx$ .22).
+
+    In actual practice we would split the data itself and stop testing and
+    delineation of the tree once we could no longer split rather than execute
+    tests on every node in a complete tree as we do in these simulations.
+
+  \item \textbf{Local or Global Adjustments} We will describe these in detail
+    below. Briefly, given the $p$-values for the children of a given parent
+    node (after simulating data-splitting) we make adjustments to those
+    $p$-values or to the threshold for rejection ($\alpha$) to further reduce
+    the probability of a false positive. Our most successful idea involves a
+    Hommel adjustment for all $k$ $p$-values of a given parent (not all $k^l$
+    $p$-values of a given level of the tree). Other idea included making no
+    adjustments until after producing all of the $p$-values in the tree and
+    then implementing a global adjustment.
+
+
+
+\end{enumerate}
+
+
+And we also added adjustments to the $p$-values and/or rejection thresholds.
+
+TODO START HERE
+
+This table shows that
 as the number of nodes per level increase, the minimum FWER also increases
 above .05. This table also shows the effects of simulated data splitting: the
 rows at the top show less control of the FWER (in all but the smallest trees
 the FWER is not controlled) while at the bottom of the table (where "Data
 Splitting" is "TRUE"), we see lower false positive rates in the trees with
 fewer nodes per level (for example, when $k=2$, the maximum FWER is .05 even
-with 18 levels and thus 524,287 total nodes).\footnote{We simulated data
-splitting by increasing the parameter of the beta distribution governing the
-production of $p$-values for nodes where the null hypothesis of no effects was
-false. For example, a Beta distribution with $a=.1$ and $b=1$ will produce
-about 74\% of $p$-values less than .05 (in R code we can see this with
-\texttt{pbeta(.05,.1,1)}. We represent data splitting as reducing the power of
-this test from .74 by dividing by the number of nodes at a given level and then
-stopping once the power of the test was roughly .20. In actual practice we
-would split the data itself and stop testing once we could no longer split
-rather than execute tests on every node in a complete tree as we do in these
-simulations.}
+with 18 levels and thus 524,287 total nodes).
+
 
 \input{strong_control_naive_tab.tex}
 
@@ -507,10 +635,8 @@ potential tests.
 
 %\input{strong_control_tab}
 
-The adjustments:
 
-
-\paragraph{Local Children Hommel Adjustment} Adjust the $p$-values for all of
+\paragraph*{Local Children Hommel Adjustment} Adjust the $p$-values for all of
 the immediate children of a rejected parent. One approach involves two steps.
 First, we take all $k$ children of a node that has passed the rejection gate,
 "split" the sample, testing the hypothesis of no effects in each of them,
