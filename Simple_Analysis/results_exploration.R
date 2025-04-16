@@ -215,17 +215,20 @@ names(strong_control_naive_tab0) <- c("$k$", "Splitting", "Min", "Max", "Min", "
 
 strong_control_naive_tab <- xtable(strong_control_naive_tab0, digits = 2)
 
-caption(strong_control_naive_tab) <- "This table shows  lack of strong-control
+caption(strong_control_naive_tab) <- "This table shows lack of strong-control
   of the family-wise error rate across 10,000 simulations for hypotheses using
   $\\alpha=.05$ on $k$-ary trees with $k$ nodes per level where the hypothesis
   of no effects is false for half of the leaves. Any ancestor of a leaf where
-  the null hypothesis of no effects is false is also false by construction.
-  Each row summarizes the results of simulations for the trees with a given $k$
-  and between min and max levels. Minimum and maximum average false positive
-  rates shown in the 'Min' and 'Max' FWER columns. The average maximum nodes
-  tested across the 10,000 simulatiosn are shown in 'Avg. Max Tests'. And
-  information about the range of trees is also shown: the total number of nodes
-  in the trees and the total number of terminal nodes or leaves."
+  the null hypothesis of no effects is false is also false by construction. No
+  local or global adjustments to the $p$-values or rejection thresholds were
+  applied for the simulations in this table. Each row summarizes the results of
+  simulations for the trees with a given $k$ and between min and max levels.
+  Minimum and maximum average false positive rates across all of the levels for
+  a given $k$ are shown in the 'Min' and 'Max' FWER columns. The average
+  maximum nodes tested across the 10,000 simulatiosn are shown in 'Avg. Max
+  Tests'. And information about the range of trees is also shown: the total
+  number of nodes in the trees and the total number of terminal nodes or
+  leaves."
 
 label(strong_control_naive_tab) <- "tab:strong_control_naive"
 
@@ -243,8 +246,34 @@ print(strong_control_naive_tab,
   file = here("Paper", "strong_control_naive_tab.tex"),
   include.rownames = FALSE,
   include.colnames = FALSE,
-  booktabs = TRUE
+  booktabs = TRUE,
+  table.placement = "H"
 )
+
+some_tau_naive %>%
+  filter(k == 2) %>%
+  arrange(adj_effN, k, l)
+# Index: <prop_tau_nonzero>
+#         k     l prop_tau_nonzero adj_effN total_nodes num_nodes_tested false_error  power num_leaves_tested leaf_power num_leaves
+#     <int> <int>            <num>   <lgcl>       <int>            <num>       <num>  <num>             <num>      <num>      <num>
+#  1:     2     2              0.5    FALSE           7           2.7354      0.0490 0.7410            0.6429          1          4
+#  2:     2     4              0.5    FALSE          31           5.7143      0.0751 0.7455            0.7358          1         16
+#  3:     2     6              0.5    FALSE         127          13.2254      0.1404 0.7386            1.1086          1         64
+#  4:     2     8              0.5    FALSE         511          26.7850      0.2081 0.7367            2.0409          1        256
+#  5:     2    10              0.5    FALSE        2047          55.5525      0.3244 0.7422            3.9855          1       1024
+#  6:     2    12              0.5    FALSE        8191         103.5610      0.4173 0.7401            7.0598          1       4096
+#  7:     2    14              0.5    FALSE       32767         191.1142      0.4811 0.7403           12.6456          1      16384
+#  8:     2    16              0.5    FALSE      131071         343.4361      0.5274 0.7498           21.7593          1      65536
+#  9:     2    18              0.5    FALSE      524287         607.7383      0.5519 0.7389           37.3772          1     262144
+# 10:     2     2              0.5     TRUE           7           2.5191      0.0452 0.7373            0.5693          1          4
+# 11:     2     4              0.5     TRUE          31           3.5107      0.0346 0.7364            0.2367          1         16
+# 12:     2     6              0.5     TRUE         127           4.1352      0.0097 0.7477            0.0266          1         64
+# 13:     2     8              0.5     TRUE         511           4.2031      0.0009 0.7456            0.0018          1        256
+# 14:     2    10              0.5     TRUE        2047           4.1435      0.0000 0.7380            0.0001          1       1024
+# 15:     2    12              0.5     TRUE        8191           4.1718      0.0000 0.7418            0.0000         NA       4096
+# 16:     2    14              0.5     TRUE       32767           4.1442      0.0000 0.7468            0.0000         NA      16384
+# 17:     2    16              0.5     TRUE      131071           4.1641      0.0000 0.7391            0.0000         NA      65536
+# 18:     2    18              0.5     TRUE      524287           4.1380      0.0000 0.7319            0.0000         NA     262144
 
 
 ### Start Here TODO

@@ -562,9 +562,9 @@ for the rejection thresholds (the $\alpha$) or the $p$-values.
 \begin{enumerate}
 
   \item \textbf{Simulating high powered tests for non-null nodes}  Like the
-    above simulations, we drew $p$-values from $\text{U}(p_\text{parent},1)$
-    for nodes with no effects (the null is true).
-
+    above simulations, we draw $p$-values from $\text{U}(p_\text{parent},1)$
+    for nodes with no effects (the null is true).For the root node,
+    $p_\text{parent}=0$.
 
     Since this tree has some nodes containing non-null effects, we draw
     $p$-values from a Beta distribution rescaled to go from $p_\text{parent}$
@@ -573,24 +573,21 @@ for the rejection thresholds (the $\alpha$) or the $p$-values.
     rescaling to produce $p_{l,k}=p_\text{parent} + (1-p_\text{parent}) \cdot
     p^*_{\text{non-null}}$.
 
-    In our simulations we set $a=.1$ as the first shape parameter of the Beta
-    distribution to simulate a reasonably powerful test: a Beta distribution
-    with $a=.1$ and $b=1$ will produce about 74\% of $p$-values less than .05
-    (in R code we can see this with \lstinline[language=R]{pbeta(.05,.1,1)=.74}.
-    For the root node, $p_\text{parent}=0$.
+    We set $a=.1$ as the first shape parameter of the Beta distribution to
+    simulate a powerful test: a Beta distribution with $a=.1$ and $b=1$ will
+    produce about 74\% of $p$-values less than .05 (in R code we can see this
+    with \lstinline[language=R]{pbeta(.05,.1,1)=.74}.
 
   \item \textbf{Simulating data-splitting} We simulated the idea of
     data-splitting by increasing the parameter of the beta distribution
     governing the production of $p$-values for nodes where the null hypothesis
-    of no effects was false. First we set a value for the total number of
-    blocks $N$. At level 0, we used $a=.1$. We then increased $a$ for each
-    level of the tree, simulating the idea that the total number of units used
-    by a parent node is divided equally by the number of child nodes. So, where
-    as we would have $N$ available to produce $p_0$, if we have a tree with
-    $k=4$, we would have $N/4$ available to test each of $p_1,\ldots,p_4$. For
-    example, if $a=.2$, then \lstinline[language=R]{pbeta(.05,.2,1)=.55}.  We
-    set a lower limit on the power such that we never increased $a$ over $.5$
-    ($a=.5$ is equivalent to power $\approx$ .22).
+    of no effects was false. For example, if $a=.1$, then power is roughly .74.
+    If $a=.2$, then power is roughly .55. And if $a=.5$, then power is roughly
+    .22. We created a function so that $a$ increased up to .5 smoothly and in a
+    way that responded to the number of nodes at each level (so that, say, the
+    decrease in power between levels is proportional to $k$). We set a lower
+    limit on the power such that we never increased $a$ over $.5$ ($a=.5$ is
+    equivalent to power $\approx$ .22).
 
     In actual practice we would split the data itself and stop testing and
     delineation of the tree once we could no longer split rather than execute
@@ -602,32 +599,91 @@ for the rejection thresholds (the $\alpha$) or the $p$-values.
     $p$-values or to the threshold for rejection ($\alpha$) to further reduce
     the probability of a false positive. Our most successful idea involves a
     Hommel adjustment for all $k$ $p$-values of a given parent (not all $k^l$
-    $p$-values of a given level of the tree). Other idea included making no
+    $p$-values of a given level of the tree). Other ideas included making no
     adjustments until after producing all of the $p$-values in the tree and
-    then implementing a global adjustment.
+    then implementing a global adjustment. We implemented multiple approaches
+    to changing the rejection threshold at a given node and provide the R code
+    below:
 
-
-
+\begin{lstlisting}[language=R]
+  if (alpha_method == "fixed") {
+    ## fixed \alpha
+    child_threshold <- parent_alpha
+  } else if (alpha_method == "spending") {
+    ## This is not alpha-spending. Just using the term for now.
+    ## Here if parent_p = .01 and alpha=.05, we have .05-.01 = .04 to
+    ## divide among the k children.
+    children_alpha_adjust <- max((alpha - parent_p), 0) / k
+    child_threshold <- parent_alpha + children_alpha_adjust
+  } else if (alpha_method == "investing") {
+    ## This is not alpha-investing. Just using the term for now.
+    children_alpha_adjust <- max((parent_alpha - parent_p), 0) / k
+    child_threshold <- parent_alpha + children_alpha_adjust
+  } else if (alpha_method == "fixed_k_adj") {
+    child_threshold <- alpha / (1 + alpha * k)
+  } else if (alpha_method == "adaptive_k_adj") {
+    child_threshold <- parent_p + (1 - parent_p) * (alpha / k)
+  } else {
+    stop("alpha_method must be one of 'fixed', 'spending', or 'investing' or 'fixed_k_adj' or 'adaptive_k_adj'.")
+  }
+\end{lstlisting}
 \end{enumerate}
 
+\subsection{No general strong control using only the three rules}
 
-And we also added adjustments to the $p$-values and/or rejection thresholds.
-
-TODO START HERE
-
-This table shows that
-as the number of nodes per level increase, the minimum FWER also increases
-above .05. This table also shows the effects of simulated data splitting: the
-rows at the top show less control of the FWER (in all but the smallest trees
-the FWER is not controlled) while at the bottom of the table (where "Data
-Splitting" is "TRUE"), we see lower false positive rates in the trees with
-fewer nodes per level (for example, when $k=2$, the maximum FWER is .05 even
-with 18 levels and thus 524,287 total nodes).
-
+Table~\ref{tab:strong_control_naive} shows that as the number of nodes per
+level increase, the minimum FWER also increases above .05. 
 
 \input{strong_control_naive_tab.tex}
 
-%TODO: Show table where it does control and list approaches. They haven in common that they involve an additional adjustment --- whether local (within a level) or global.
+This table also shows the effects of simulated data splitting as a kind of
+local adjustment: the rows at the top of the table show less control of the
+FWER and much less gating. In the output below we focus on the case with $k=2$
+to describe what is happening in a bit more detail. We see that when $k=2$ and
+$l=18$, the whole tree has 524,287 total nodes of which 262,144 are terminal
+nodes or leaves. When \Verb+adj_effN+ is \texttt{FALSE} (no data splitting,
+the test has the same power at all nodes), it visits, on average, across 10,000
+simulations, 607.7 nodes out of the total and it makes at least one false
+rejection 55\% of those simulations: the three rules do not control the FWER
+here. At the bottom of the output table, we see the analogous line for $k=2$
+and $l=18$ in which we simulate data-splitting by reducing the power of the
+test at each level from .74 to .22 as described above. In that case, the rules
+stop the testing after visiting no more than about 4 nodes (on average, across
+the 10,000 simulations), no leaves are ever visited, and no false rejections
+occur.
+
+\begin{Verbatim}[fontsize=\footnotesize]
+k  l adj_effN total_nodes num_nodes_tested false_error  power num_leaves_tested leaf_power num_leaves
+2  2    FALSE           7           2.7354      0.0490 0.7410            0.6429          1          4
+2  4    FALSE          31           5.7143      0.0751 0.7455            0.7358          1         16
+2  6    FALSE         127          13.2254      0.1404 0.7386            1.1086          1         64
+2  8    FALSE         511          26.7850      0.2081 0.7367            2.0409          1        256
+2 10    FALSE        2047          55.5525      0.3244 0.7422            3.9855          1       1024
+2 12    FALSE        8191         103.5610      0.4173 0.7401            7.0598          1       4096
+2 14    FALSE       32767         191.1142      0.4811 0.7403           12.6456          1      16384
+2 16    FALSE      131071         343.4361      0.5274 0.7498           21.7593          1      65536
+2 18    FALSE      524287         607.7383      0.5519 0.7389           37.3772          1     262144
+2  2     TRUE           7           2.5191      0.0452 0.7373            0.5693          1          4
+2  4     TRUE          31           3.5107      0.0346 0.7364            0.2367          1         16
+2  6     TRUE         127           4.1352      0.0097 0.7477            0.0266          1         64
+2  8     TRUE         511           4.2031      0.0009 0.7456            0.0018          1        256
+2 10     TRUE        2047           4.1435      0.0000 0.7380            0.0001          1       1024
+2 12     TRUE        8191           4.1718      0.0000 0.7418            0.0000         NA       4096
+2 14     TRUE       32767           4.1442      0.0000 0.7468            0.0000         NA      16384
+2 16     TRUE      131071           4.1641      0.0000 0.7391            0.0000         NA      65536
+2 18     TRUE      524287           4.1380      0.0000 0.7319            0.0000         NA     262144
+\end{Verbatim}
+
+These results suggest the need for some other adjustment to the testing
+procedure above the gating and monotonicity requirements. The data splitting
+approach (as simulated roughly here) reduces the power of the test and thus
+protects the FWER when the number of nodes per level is 2 in this particular
+simulation. But Table~\ref{tab:strong_control_tab} shows that data splitting as
+implemented here is not enough.
+
+\clearpage
+
+\subsection{Strong control using local adjustments}
 
 However, if we apply one of the additional adjustments to the testing
 procedure, we  can control the FWER in a strong sense even with thousands of
@@ -675,10 +731,20 @@ simulation.
   100     2     2   0.0269     0.739             3.25              1             1.21             0.00225       10000           11.3
 \end{Verbatim}
 
-\paragraph{Global Adjustment}
+\paragraph*{Global Adjustment}
 
-\paragraph{Local rejection threshold adjustment}
+The idea here is to take the collection of $p$-values arising from the simple
+application of the three rules and then adjust them all after those rules have
+been applied. Any $p > \alpha$ would be not rejected and all of its children
+would then be required to be not rejected: monotonicity of $p$-values is
+already built into the algorithm, so an adjustment method like Hommell or Holm
+would not need additional work.
 
+\paragraph*{Local rejection threshold adjustment}
+
+The idea here is to try to either (1) decrease the rejection threshold for each
+test in a way that is less conservative than Hommell and/or (2) add power back
+to the case with the Hommell adjustment.
 
 
 
