@@ -29,24 +29,6 @@ if (Sys.getenv("CORES") == "" & !exists("numcores")) {
   }
 }
 
-
-## We are using beta_params = c(.1,1) (very high power at each
-## node, all non-null nodes same high power) This last is very unrealistic
-## since we are going to actually split the data at each node. So that N at
-## each parent is always larger than N at any child.
-
-## Setting N_total very large just means that the power of the rbeta continues
-## to go down as the tree grows rather than stabilizing at something like 1.
-
-# mean(rbeta(10000, .1, 1) <= .05)
-# ## Notice that this is runif
-# mean(rbeta(10000, 1, 1) <= .05)
-# ## This is slightly more powerful than the dist under the null
-# mean(rbeta(10000, .9, 1) <= .05)
-# mean(rbeta(10000, .5, 1) <= .05)
-# ## This is closer to the cap
-# mean(rbeta(10000, 1.64, 1) <= .05)
-
 ## This next comes from Simple_Analysis/what_has_been_done.R
 ## if there is no not_done_idx.rda file then use seq_len on simparms
 if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
@@ -63,18 +45,18 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 ## future_apply or some job array via slurm which might be a good idea but basically annoying because of shipping objects around.
 
 #if (length(theidx) == nrow(sim_parms)) {
- # machine_name <- Sys.getenv("MACHINE")
-  if (machine_name == "CampusCluster") {
-    theidx <- theidx[1:floor(length(theidx) * .75)]
-  }
-  if (machine_name == "Keeling") {
-    theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
-  }
+# # machine_name <- Sys.getenv("MACHINE")
+#  if (machine_name == "CampusCluster") {
+#    theidx <- theidx[1:floor(length(theidx) * .75)]
+#  }
+#  if (machine_name == "Keeling") {
+#    theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
+#  }
 #}
 
 ## Parallelizing the outer loop not the inner loop for most of the sims, but not all
-## res <- mclapply(theidx, function(i) {
-res <- lapply(theidx, function(i) {
+res <- mclapply(theidx, function(i) {
+##res <- lapply(theidx, function(i) {
   set.seed(12345) ## same seed for each set of parms
   ## Using the key
   parms <- sim_parms[.(i)]
@@ -87,7 +69,7 @@ res <- lapply(theidx, function(i) {
     t = parms$prop_tau_nonzero,
     alpha = .05,
     N_total = parms$total_nodes * 100,
-    beta_base = .1,
+    beta_base = parms$beta_base,
     adj_effN = parms$adj_effN,
     local_adj_p_fn = getFromNamespace(parms[["local_adj_fn"]], ns = "TreeTestsSim"),
     global_adj = "hommel",
@@ -101,10 +83,10 @@ res <- lapply(theidx, function(i) {
   parms[, names(res) := as.list(res)]
   parms$time <- etm["elapsed"]
   parms$sims <- nsims
-  filename <- paste(data_path, "/sim_", paste(parms[1, 1:7], collapse = "_"), ".csv", collapse = "", sep = "")
+  filename <- paste(data_path, "/sim_", paste(parms[1, 1:8], collapse = "_"), ".csv", collapse = "", sep = "")
   ## Since these simulations take a long time. Save them to disc as we go.
   data.table::fwrite(parms, file = filename)
-  message(paste(c(parms[1, 1:7], parms$time), collapse = " "))
+  message(paste(c(parms[1, 1:8], parms$time), collapse = " "))
   return(parms)
   })
 #}, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)

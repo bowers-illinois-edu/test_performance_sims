@@ -262,25 +262,31 @@ We then show that strong control of the FWER requires one or more of the followi
 
   \item[The \textbf{sample splitting rule}] Although one could organize
     hypotheses in order where each hypothesis is tested on the same number of
-    units (say the hypotheses are about different elements of an index) in this
-    case, we require that the sample size at each node be strictly less than
-    the sample size of its parent. This maps directly onto the application ---
-    where we are trying to separate blocks or groups of blocks within which the
-    treatment effect is detectable from those within which it is not
-    detectable. In practice, the sample size goes down quickly. For example in
-    a k-ary tree with $k=2$ nodes at each level below the root and $l=3$
-    levels, and splitting the sample into equal numbers of blocks at each
-    level, we have, say, $B$ total blocks used for $\hyp{0}$, $B/2$ blocks used
-    for each of $\hyp{1}$ and $\hyp{2}$, and $(B/2)/2=B/4$ for each of
-    $\hyp{3}, \ldots, \hyp{6}$ and $(B/4)/2=B/8$ for the nodes at the next
-    level. This also implies limits on the sizes of the tree, with $B=100$, a
-    tree with $k=2$ can have no more than $l=5$.\footnote{We know that the
-    number of nodes in a complete $k$-ary tree is $(k^{l+1}-1)/(k-1)$ and the
-    maximum number of levels in a tree with $k$ nodes at each level with $B$
-    total nodes is $l = \left\lfloor \log_k \left( B (k - 1) + 1 \right)
-    \right\rfloor - 1$.}
+    units\footnote{say the hypotheses are about the effect of a treatment on an
+    outcome that is an index of different components and the focus is on
+    detecting effects on individual components} in this case, we require that
+    the sample size at each node be strictly less than the sample size of its
+    parent. This maps directly onto the application --- where we are trying to
+    separate blocks or groups of blocks within which the treatment effect is
+    detectable from those within which it is not detectable. In practice, the
+    sample size goes down quickly. For example in a $k$-ary tree with $k=2$ nodes
+    at each level below the root and $l=3$ levels, and splitting the sample
+    into equal numbers of blocks at each level, we have, say, $B$ total blocks
+    used for $\hyp{0}$, $B/2$ blocks used for each of $\hyp{1}$ and $\hyp{2}$,
+    and $(B/2)/2=B/4$ for each of $\hyp{3}, \ldots, \hyp{6}$ and $(B/4)/2=B/8$
+    for the nodes at the next level. This also implies limits on the sizes of
+    the tree, with $B=100$, a tree with $k=2$ can have no more than
+    $l=5$.\footnote{We know that the number of nodes in a complete $k$-ary tree
+    is $(k^{l+1}-1)/(k-1)$ and the maximum number of levels in a tree with $k$
+    nodes at each level with $B$ total nodes is $l = \left\lfloor \log_k \left(
+    B (k - 1) + 1 \right) \right\rfloor - 1$.}
 
-    We speculate that one can control the FWER in a strong sense (with non
+    That is, this rule is built into the process of the application. We have to
+    do some data splitting in order to  go from a single overall test of the
+    null hypothesis of no effects for any unit in any block to tests of that
+    same hypothesis in a single block.
+
+    \textbf{We speculate} that one can control the FWER in a strong sense (with non
     trivial power) without data splitting, say, if the aim is to understand the
     contributions of a given test item to an overall score. But we focus on our
     specific case of block randomized experiments here, in which data splitting
@@ -302,16 +308,21 @@ We then show that strong control of the FWER requires one or more of the followi
     adjustment is conservative. We leave for another project the derivation of
     the optimal local adjustment. In what follows we compare the Hommel
     adjustment for $p$-values across $k$ hypotheses to approaches that directly
-    adjust the $\alpha$ level for the hypotheses at a given level.}
+    adjust the $\alpha$ level for the hypotheses at a given level.} \textbf{So
+    far, our simulations show that local FWER adjustments across all $k$ nodes
+    of a given parent do control the FWER in a strong sense when combined with
+    the stopping rule, monotonicity, valid false positive rate, and data
+    splitting.}
+    %TODO: Run a subset of the simulations varying power and also adding local fdr.
 
-  \item[Optional rule: the \textbf{global adjustment rule}] It is possible that
-    we can skip the local adjustment rule and just do a global adjustment FWER
-    or even FDR adjustment for the $p$-values that are less than or equal to
-    $\alpha$ in the tree after all of the nodes have been tested following the
-    other rules. We may leave this rule for a different paper but we explored
-    it in the simulations that we show below.\footnote{TODO: Check that when we
-    do this the results respect the rules. For example, that monotonicity and
-    gating are respected.}
+  \item[The \textbf{global adjustment rule}] \textbf{We speculate} that it is
+    possible that we can skip the local adjustment rule and just do a global
+    adjustment FWER or even FDR adjustment for the $p$-values that are less
+    than or equal to $\alpha$ in the tree after all of the nodes have been
+    tested following the other rules. We may leave this rule for a different
+    paper but we explored it in the simulations that we show
+    below.\footnote{TODO: Check that when we do this the results respect the
+    rules. For example, that monotonicity and gating are respected.}
 
 \end{description}
 
@@ -612,7 +623,7 @@ for the rejection thresholds (the $\alpha$) or the $p$-values.
   } else if (alpha_method == "spending") {
     ## This is not alpha-spending. Just using the term for now.
     ## Here if parent_p = .01 and alpha=.05, we have .05-.01 = .04 to
-    ## divide among the k children.
+    ## divide among the k children so we would have (.05-.01)/4
     children_alpha_adjust <- max((alpha - parent_p), 0) / k
     child_threshold <- parent_alpha + children_alpha_adjust
   } else if (alpha_method == "investing") {
