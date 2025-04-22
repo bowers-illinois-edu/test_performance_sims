@@ -623,16 +623,26 @@ for the rejection thresholds (the $\alpha$) or the $p$-values.
   } else if (alpha_method == "spending") {
     ## This is not alpha-spending. Just using the term for now.
     ## Here if parent_p = .01 and alpha=.05, we have .05-.01 = .04 to
-    ## divide among the k children so we would have (.05-.01)/4
+    ## divide among the k children so we would have (.05-.01)/4 = .01 as an adjustment.
+    ## this would allow us to reject when child_threshold = .05 + .01 = .06
+    ## this adjustment is 0 when alpha <= parent_p (which occurs when the testing stops)
     children_alpha_adjust <- max((alpha - parent_p), 0) / k
     child_threshold <- parent_alpha + children_alpha_adjust
   } else if (alpha_method == "investing") {
     ## This is not alpha-investing. Just using the term for now.
+    ## In this case parent_alpha is the alpha allocation of the parent which is the child_threshold of the parent when the parent is a child.
+    ## So, if we start with alpha=.05, and children_alpha_adjust = .01, and child_threshold=.05+.01=.06, and that child node has a p=.02
+    ## then the alpha adjustment is (.06-.02)/4 = .01 for the next set of child nodes
     children_alpha_adjust <- max((parent_alpha - parent_p), 0) / k
     child_threshold <- parent_alpha + children_alpha_adjust
   } else if (alpha_method == "fixed_k_adj") {
+    ## This is just a fixed adjustment to reduce alpha for all nodes:
+    ## with alpha=.05 and k=4, we would have .05/(1+.05*4) = .042
+    ## and when k=10 we have .033
     child_threshold <- alpha / (1 + alpha * k)
   } else if (alpha_method == "adaptive_k_adj") {
+    ## And this one also reduces alpha and depends on the parent p. With parent_p=.01 and alpha=.05 and k=4 we would have:
+    ## alpha=.02.
     child_threshold <- parent_p + (1 - parent_p) * (alpha / k)
   } else {
     stop("alpha_method must be one of 'fixed', 'spending', or 'investing' or 'fixed_k_adj' or 'adaptive_k_adj'.")
