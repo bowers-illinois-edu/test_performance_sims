@@ -76,8 +76,8 @@ res <- mclapply(theidx, function(i) {
     alpha_method = parms$alpha_fn,
     return_details = FALSE,
     final_global_adj = parms$final_adj_method,
-    multicore = TRUE
-    ##multicore = FALSE
+    ##multicore = TRUE
+    multicore = FALSE
   )
   etm <- proc.time() - ptm
   parms[, names(res) := as.list(res)]
