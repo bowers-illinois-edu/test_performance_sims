@@ -88,8 +88,8 @@ res <- mclapply(theidx, function(i) {
   data.table::fwrite(parms, file = filename)
   message(paste(c(parms[1, 1:8], parms$time), collapse = " "))
   return(parms)
-  })
-#}, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)
+ ## })
+}, mc.cores = ncores, mc.preschedule = FALSE, mc.set.seed = TRUE)
 
 ## This all takes so long, that not worth actually saving.
 ## save(res, file = here("Simple_Analysis", paste("simple_latest_results_dt", "_", machine_name, ".rda", collapse = "")))
