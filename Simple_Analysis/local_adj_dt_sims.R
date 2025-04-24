@@ -14,6 +14,7 @@ message(machine_name)
 print(machine_name)
 
 load(here("Simple_Analysis", "sim_parms.rda"), verbose = TRUE)
+nrow(sim_parms)
 
 data_path <- file.path(here(), "Simple_Analysis/CSVS_latest")
 nsims <- 10000
@@ -54,6 +55,7 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 #  }
 #}
 
+theidx <- theidx[1:12]
 ## Parallelizing the outer loop not the inner loop for most of the sims, but not all
 res <- mclapply(theidx, function(i) {
 ##res <- lapply(theidx, function(i) {

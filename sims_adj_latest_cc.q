@@ -26,7 +26,7 @@ echo "Hostname: $(hostname)"
 echo "Working directory: $PWD"
 
 #Rscript r-multihost.R
-Rscript -e "remotes::install_github('bowers-illinois-edu/TreeTestSim')"
+#Rscript -e "remotes::install_github('bowers-illinois-edu/TreeTestSim')"
 Rscript --verbose Simple_Analysis/local_adj_dt_sims.R
 # R --file=Analysis/siusims.R
 
