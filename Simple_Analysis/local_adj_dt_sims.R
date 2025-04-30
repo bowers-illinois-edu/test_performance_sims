@@ -29,6 +29,7 @@ if (Sys.getenv("CORES") == "" & !exists("numcores")) {
     ncores <- as.numeric(Sys.getenv("CORES")[[1]])
   }
 }
+print(ncores)
 
 ## This next comes from Simple_Analysis/what_has_been_done.R
 ## if there is no not_done_idx.rda file then use seq_len on simparms
@@ -45,17 +46,19 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 ## Trying to keep this simple and one machine/node and use mclapply rather than
 ## future_apply or some job array via slurm which might be a good idea but basically annoying because of shipping objects around.
 
-#if (length(theidx) == nrow(sim_parms)) {
-# # machine_name <- Sys.getenv("MACHINE")
-#  if (machine_name == "CampusCluster") {
-#    theidx <- theidx[1:floor(length(theidx) * .75)]
-#  }
-#  if (machine_name == "Keeling") {
-#    theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
-#  }
-#}
+if (length(theidx) == nrow(sim_parms)) {
+ machine_name <- Sys.getenv("MACHINE")
+  if (machine_name == "CampusCluster") {
+    # theidx <- theidx[1:floor(length(theidx) * .75)]
+    theidx <- theidx[floor(length(theidx) * .5):length(theidx)]
+  }
+  if (machine_name == "Keeling") {
+    theidx <- theidx[1:floor(length(theidx) * .5)]
+    # theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
+  }
+}
 
-theidx <- theidx[1:12]
+#theidx <- theidx[1:12]
 ## Parallelizing the outer loop not the inner loop for most of the sims, but not all
 res <- mclapply(theidx, function(i) {
 ##res <- lapply(theidx, function(i) {
