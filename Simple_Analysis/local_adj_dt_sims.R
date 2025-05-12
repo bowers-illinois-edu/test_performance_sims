@@ -41,13 +41,14 @@ if (file.exists(here("Simple_Analysis", "not_done_idx.rda"))) {
 } else {
   theidx <- sim_parms$idx # seq_len(nrow(simparms))
 }
+str(theidx)
 
 ## Not duplicate work: send most to campus cluster and some to keeling because the CampusCluster times out after 3 days.
 ## Trying to keep this simple and one machine/node and use mclapply rather than
 ## future_apply or some job array via slurm which might be a good idea but basically annoying because of shipping objects around.
 
 if (length(theidx) == nrow(sim_parms)) {
- machine_name <- Sys.getenv("MACHINE")
+ ## machine_name <- Sys.getenv("MACHINE")
   if (machine_name == "CampusCluster") {
     # theidx <- theidx[1:floor(length(theidx) * .75)]
     theidx <- theidx[floor(length(theidx) * .5):length(theidx)]
@@ -57,7 +58,7 @@ if (length(theidx) == nrow(sim_parms)) {
     # theidx <- theidx[floor(length(theidx) * .75):length(theidx)]
   }
 }
-
+str(theidx)
 #theidx <- theidx[1:12]
 ## Parallelizing the outer loop not the inner loop for most of the sims, but not all
 res <- mclapply(theidx, function(i) {

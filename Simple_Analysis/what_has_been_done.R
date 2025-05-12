@@ -7,7 +7,7 @@ load(here("Simple_Analysis", "sim_parms.rda"))
 ## Relies on simparms being keyed to idx
 stopifnot(key(sim_parms) == "idx")
 
-sim_parms[, nms := do.call(paste, c("sim", .SD[, 1:7], sep = "_"))]
+sim_parms[, nms := do.call(paste, c("sim", .SD[, 1:8], sep = "_"))]
 
 done <- stri_replace_all_fixed(list.files(path = here("Simple_Analysis/CSVS_latest"), patt = "[0-9]*csv"),
   replacement = "", pattern = ".csv", vectorize_all = TRUE
