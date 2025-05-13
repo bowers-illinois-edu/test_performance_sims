@@ -1,0 +1,43 @@
+% latex table generated in R 4.4.1 by xtable 1.8-4 package
+% Fri Jul 12 14:41:10 2024
+\begin{table}[H]
+\centering
+\begin{tabular}{llrr}
+  \toprule
+ &  & Max FWER & Max FDR \\ 
+  \midrule
+All Blocks (FDR adjust) & fixed (a=.05) & 0.004 & 0.039 \\ 
+  All Blocks (Holm adjust) & fixed (a=.05) & 0.004 & 0.038 \\ 
+  All Blocks (Hommel adjust) & fixed (a=.05) & 0.004 & 0.039 \\ 
+  K-Means Split on Prognostic Covariate & alpha addis & 0.000 & 0.002 \\ 
+  K-Means Split on Prognostic Covariate & alpha investing & 0.001 & 0.007 \\ 
+  K-Means Split on Prognostic Covariate & alpha saffron & 0.001 & 0.008 \\ 
+  K-Means Split on Prognostic Covariate & fixed (a=.05) & 0.002 & 0.018 \\ 
+  Equal Sample Size Split & alpha addis & 0.000 & 0.000 \\ 
+  Equal Sample Size Split & alpha investing & 0.000 & 0.000 \\ 
+  Equal Sample Size Split & alpha saffron & 0.000 & 0.000 \\ 
+  Equal Sample Size Split & fixed (a=.05) & 0.000 & 0.000 \\ 
+  Split at Largest Block Precision Weight & alpha addis & 0.001 & 0.010 \\ 
+  Split at Largest Block Precision Weight & alpha investing & 0.010 & 0.028 \\ 
+  Split at Largest Block Precision Weight & alpha saffron & 0.004 & 0.028 \\ 
+  Split at Largest Block Precision Weight & fixed (a=.05) & 0.002 & 0.041 \\ 
+  Pre-Specified Covariate Splits Binary & alpha addis & 0.000 & 0.004 \\ 
+  Pre-Specified Covariate Splits Binary & alpha investing & 0.001 & 0.008 \\ 
+  Pre-Specified Covariate Splits Binary & alpha saffron & 0.001 & 0.012 \\ 
+  Pre-Specified Covariate Splits Binary & fixed (a=.05) & 0.002 & 0.015 \\ 
+  Pre-Specified Covariate Splits Multi & alpha addis & 0.000 & 0.003 \\ 
+  Pre-Specified Covariate Splits Multi & alpha investing & 0.001 & 0.005 \\ 
+  Pre-Specified Covariate Splits Multi & alpha saffron & 0.001 & 0.006 \\ 
+  Pre-Specified Covariate Splits Multi & fixed (a=.05) & 0.002 & 0.020 \\ 
+   \bottomrule
+\end{tabular}
+\caption{All approaches control FWER and FDR when the sharp null of no
+  effects is true. Entries are the maximum FWER or FDR over simulations
+  involving between 10 (N=200) and 100 (N=2000) blocks with all blocks
+having 20 units and half of the units assigned
+to treatment at random. In this simulation the null
+  hypothesis of no effects is true for all units and all blocks ($\tau_{i,b} =
+  0$ for all $i$ and $b$). Twice the simulation error for 1000 simulations is
+  roughly .02.} 
+\label{tab:weak_fwer_control}
+\end{table}
